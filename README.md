@@ -7,21 +7,20 @@
 ## Table of Contents
 
 1. [Project Overview](#project-overview)
-2. [Screenshots](#screenshots)
-3. [Features](#features)
-4. [System Architecture](#system-architecture)
-5. [Tech Stack](#tech-stack)
-6. [Prerequisites](#prerequisites)
-7. [Quick Setup](#quick-setup)
-8. [Manual Installation](#manual-installation)
-9. [Running the Application](#running-the-application)
-10. [First-Time Setup](#first-time-setup)
-11. [Demo Data](#demo-data)
-12. [API Documentation](#api-documentation)
-13. [Project Structure](#project-structure)
-14. [Known Limitations](#known-limitations)
-15. [Future Work](#future-work)
-16. [Academic Context](#academic-context)
+2. [Features](#features)
+3. [System Architecture](#system-architecture)
+4. [Tech Stack](#tech-stack)
+5. [Prerequisites](#prerequisites)
+6. [Quick Setup](#quick-setup)
+7. [Manual Installation](#manual-installation)
+8. [Running the Application](#running-the-application)
+9. [First-Time Setup](#first-time-setup)
+10. [Demo Data](#demo-data)
+11. [API Documentation](#api-documentation)
+12. [Project Structure](#project-structure)
+13. [Known Limitations](#known-limitations)
+14. [Future Work](#future-work)
+15. [Academic Context](#academic-context)
 
 ---
 
@@ -32,23 +31,6 @@
 The system implements a **Retrieval-Augmented Generation (RAG)** pipeline: evidence is chunked, embedded into a vector database (Qdrant), and retrieved as context for a locally-running Ollama LLM. Investigators interact with the evidence through a natural-language chat interface, while the backend simultaneously extracts named entities, builds relationship graphs, detects anomalies, and generates structured forensic reports.
 
 This project was developed as a semester-long final project exploring the intersection of AI, cybersecurity, and human-computer interaction. The application is designed to be deployable on a standalone machine in an air-gapped forensics lab — no internet connection is required after initial setup.
-
----
-
-## Screenshots
-
-> Replace the placeholder paths below with actual screenshots after running the application.
-
-| Screen | Description |
-|--------|-------------|
-| ![Dashboard](docs/screenshots/dashboard.png) | Central dashboard with case statistics, recent activity, and system health |
-| ![Investigate](docs/screenshots/investigate.png) | AI-powered natural language investigation interface |
-| ![Entity Map](docs/screenshots/entity_map.png) | Interactive force-directed entity relationship graph |
-| ![Timeline](docs/screenshots/timeline.png) | Chronological file activity reconstruction |
-| ![Evidence](docs/screenshots/evidence.png) | Evidence upload and management panel |
-| ![Reports](docs/screenshots/reports.png) | Auto-generated investigation reports (PDF export) |
-| ![Activity Log](docs/screenshots/activity.png) | Global audit trail across all cases |
-| ![Geo Map](docs/screenshots/geomap.png) | GPS and IP geolocation plotting on interactive map |
 
 ---
 
