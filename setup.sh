@@ -1,0 +1,172 @@
+#!/bin/bash
+set -e
+
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+echo ""
+echo -e "${BLUE}╔══════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║   Cognitive Forensic Investigator    ║${NC}"
+echo -e "${BLUE}║         Setup Script v2.0            ║${NC}"
+echo -e "${BLUE}╚══════════════════════════════════════╝${NC}"
+echo ""
+
+# ── Detect OS ─────────────────────────────────────────────────────────────────
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  OS="macos"
+  echo -e "${BLUE}Platform: macOS${NC}"
+elif [[ -f /etc/debian_version ]]; then
+  OS="linux"
+  echo -e "${BLUE}Platform: Ubuntu/Debian Linux${NC}"
+else
+  OS="unknown"
+  echo -e "${YELLOW}Platform: Unknown — some steps may need manual intervention${NC}"
+fi
+
+# ── 1. Prerequisites ──────────────────────────────────────────────────────────
+echo ""
+echo -e "${YELLOW}[1/8] Checking prerequisites...${NC}"
+
+check_cmd() {
+  local cmd=$1
+  local install_mac=$2
+  local install_linux=$3
+  if ! command -v "$cmd" &>/dev/null; then
+    echo -e "${RED}✗ $cmd not found${NC}"
+    if [[ "$OS" == "macos" ]]; then
+      echo "  Install: $install_mac"
+    else
+      echo "  Install: $install_linux"
+    fi
+    exit 1
+  fi
+  echo -e "${GREEN}✓ $cmd $("$cmd" --version 2>/dev/null | head -1)${NC}"
+}
+
+check_cmd python3 \
+  "brew install python3" \
+  "sudo apt install python3 python3-pip python3-venv"
+
+check_cmd node \
+  "brew install node" \
+  "sudo apt install nodejs npm"
+
+if ! command -v ollama &>/dev/null; then
+  echo -e "${YELLOW}⚠ Ollama not found${NC}"
+  if [[ "$OS" == "macos" ]]; then
+    echo "  Download from: https://ollama.com"
+  else
+    echo "  Install: curl -fsSL https://ollama.com/install.sh | sh"
+  fi
+  echo -e "${YELLOW}  Continuing — start Ollama before running the app${NC}"
+else
+  echo -e "${GREEN}✓ Ollama found${NC}"
+fi
+
+# ── 2. .env setup ─────────────────────────────────────────────────────────────
+echo ""
+echo -e "${YELLOW}[2/8] Environment configuration...${NC}"
+if [ ! -f ".env" ]; then
+  if [ -f ".env.example" ]; then
+    cp .env.example .env
+    echo -e "${GREEN}✓ Created .env from .env.example${NC}"
+    echo -e "${YELLOW}  ⚠ Edit .env and set a real SECRET_KEY before use${NC}"
+  else
+    echo -e "${RED}✗ No .env or .env.example found${NC}"
+    exit 1
+  fi
+else
+  echo -e "${GREEN}✓ .env already exists${NC}"
+fi
+
+# ── 3. Python virtual environment ─────────────────────────────────────────────
+echo ""
+echo -e "${YELLOW}[3/8] Python virtual environment...${NC}"
+if [ ! -d "venv" ]; then
+  python3 -m venv venv
+  echo -e "${GREEN}✓ Virtual environment created${NC}"
+else
+  echo -e "${GREEN}✓ Virtual environment exists${NC}"
+fi
+source venv/bin/activate
+
+# ── 4. Python packages ────────────────────────────────────────────────────────
+echo ""
+echo -e "${YELLOW}[4/8] Installing Python packages...${NC}"
+pip install -q --upgrade pip setuptools wheel
+pip install -q -r requirements.txt
+echo -e "${GREEN}✓ Python packages installed${NC}"
+
+# ── 5. spaCy NLP model ────────────────────────────────────────────────────────
+echo ""
+echo -e "${YELLOW}[5/8] NLP model...${NC}"
+if python3 -c "import spacy; spacy.load('en_core_web_lg')" 2>/dev/null; then
+  echo -e "${GREEN}✓ en_core_web_lg already installed${NC}"
+else
+  python3 -m spacy download en_core_web_lg -q
+  echo -e "${GREEN}✓ en_core_web_lg downloaded${NC}"
+fi
+
+# ── 6. Data directories ───────────────────────────────────────────────────────
+echo ""
+echo -e "${YELLOW}[6/8] Creating data directories...${NC}"
+mkdir -p data/cases data/qdrant_store
+echo -e "${GREEN}✓ Directories ready${NC}"
+
+# ── 7. Database migrations ────────────────────────────────────────────────────
+echo ""
+echo -e "${YELLOW}[7/8] Running database migrations...${NC}"
+PYTHONPATH=. python3 backend/migrate_all.py
+echo -e "${GREEN}✓ Migrations complete${NC}"
+
+# ── 8. Frontend packages ──────────────────────────────────────────────────────
+echo ""
+echo -e "${YELLOW}[8/8] Frontend packages...${NC}"
+cd frontend && npm install --silent && cd ..
+echo -e "${GREEN}✓ Frontend packages installed${NC}"
+
+# ── Pull Ollama models ────────────────────────────────────────────────────────
+echo ""
+echo -e "${YELLOW}Pulling Ollama models...${NC}"
+
+# Read model name from .env, fallback to llama3.2:3b
+OLLAMA_MODEL=$(grep "^OLLAMA_MODEL=" .env 2>/dev/null \
+  | cut -d= -f2 | tr -d ' ')
+OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2:3b}
+
+if command -v ollama &>/dev/null; then
+  ollama pull "$OLLAMA_MODEL" && \
+    echo -e "${GREEN}✓ $OLLAMA_MODEL ready${NC}"
+  ollama pull nomic-embed-text && \
+    echo -e "${GREEN}✓ nomic-embed-text ready${NC}"
+else
+  echo -e "${YELLOW}⚠ Ollama not running — pull models manually:${NC}"
+  echo "  ollama pull $OLLAMA_MODEL"
+  echo "  ollama pull nomic-embed-text"
+fi
+
+# ── Done ──────────────────────────────────────────────────────────────────────
+echo ""
+echo -e "${GREEN}╔══════════════════════════════════════╗${NC}"
+echo -e "${GREEN}║         Setup Complete! ✓            ║${NC}"
+echo -e "${GREEN}╚══════════════════════════════════════╝${NC}"
+echo ""
+echo "Start the application (3 terminals):"
+echo ""
+echo -e "  ${BLUE}Terminal 1${NC} — AI Engine"
+echo "    ollama serve"
+echo ""
+echo -e "  ${BLUE}Terminal 2${NC} — Backend"
+echo "    source venv/bin/activate"
+echo "    PYTHONPATH=. uvicorn backend.main:app --reload --port 8000"
+echo ""
+echo -e "  ${BLUE}Terminal 3${NC} — Frontend"
+echo "    cd frontend && npm run dev"
+echo ""
+echo -e "  ${BLUE}Then open:${NC} http://localhost:3000"
+echo ""
+echo "  First user to register becomes Admin."
+echo ""
