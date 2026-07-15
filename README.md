@@ -126,7 +126,7 @@ This project was developed as a semester-long final project exploring the inters
 - React Error Boundaries — graceful recovery UI on component failures
 
 ### Developer Experience
-- `setup.sh` — one-command automated environment setup
+- `setup.sh` — one-command automated environment setup (auto-detects macOS and Linux)
 - `seed_demo.py` — realistic demo data seeder for presentations
 - Hot-reload in development for both frontend (Vite) and backend (uvicorn `--reload`)
 - Structured logging to console and audit DB
@@ -244,24 +244,50 @@ Investigator Query
 
 Ensure the following are installed on your system before proceeding.
 
-| Requirement | Minimum Version | Install (macOS) |
-|-------------|----------------|-----------------|
-| Python | 3.10+ | `brew install python3` |
-| Node.js | 18+ | `brew install node` |
-| npm | 9+ | bundled with Node.js |
-| Ollama | latest | [https://ollama.com](https://ollama.com) |
-| Tesseract (OCR) | 5.0+ | `brew install tesseract` |
-| ffmpeg (audio) | 6.0+ | `brew install ffmpeg` |
-| libewf (disk images) | latest | `brew install libewf` |
-| The Sleuth Kit | 4.12+ | `brew install sleuthkit` |
+| Requirement | Min Version | macOS | Linux (Ubuntu/Debian) |
+|---|---|---|---|
+| Python | 3.10+ | `brew install python3` | `sudo apt install python3 python3-pip python3-venv` |
+| Node.js | 18+ | `brew install node` | `sudo apt install nodejs npm` |
+| npm | 9+ | bundled with Node.js | bundled with Node.js |
+| Ollama | latest | [ollama.com](https://ollama.com) | `curl -fsSL https://ollama.com/install.sh \| sh` |
+| Tesseract OCR | 5.0+ | `brew install tesseract` | `sudo apt install tesseract-ocr` |
+| ffmpeg | 6.0+ | `brew install ffmpeg` | `sudo apt install ffmpeg` |
+| libewf (disk images) | latest | `brew install libewf` | `sudo apt install libewf-dev ewf-tools` |
+| The Sleuth Kit | 4.12+ | `brew install sleuthkit` | `sudo apt install sleuthkit` |
+| Build tools | — | Xcode CLI tools | `sudo apt install build-essential libssl-dev libffi-dev python3-dev` |
 
 > **Note:** pyewf and pytsk3 (disk image parsing) are optional. The system degrades gracefully and supports all other file types without them.
+
+### Linux GPU Setup (NVIDIA)
+
+Linux users with NVIDIA GPUs get the best performance from Ollama. Before running setup:
+
+```bash
+# Install NVIDIA driver (required for GPU inference)
+sudo apt install nvidia-driver-570
+sudo reboot
+
+# After reboot, verify GPU is detected
+nvidia-smi
+# Should show your GPU and Driver Version: 570+
+```
+
+Recommended models by GPU VRAM:
+- **4 GB VRAM** (e.g. GTX 1050 Ti): `phi4-mini`
+- **8 GB VRAM**: `llama3.2:3b` *(default)*
+- **12 GB+ VRAM**: `qwen2.5:7b`
+
+Set your chosen model in `.env`:
+
+```env
+OLLAMA_MODEL=phi4-mini
+```
 
 ---
 
 ## Quick Setup
 
-The fastest way to get started on a fresh machine:
+The fastest way to get started on a fresh machine. `setup.sh` **auto-detects your operating system** and runs the correct commands for both macOS and Linux automatically:
 
 ```bash
 # 1. Clone or extract the project
@@ -270,6 +296,8 @@ cd cfi_project/
 # 2. Run the automated setup script
 ./setup.sh
 ```
+
+> **Linux users:** If you get a permission error, run `chmod +x setup.sh` first, then `./setup.sh`.
 
 `setup.sh` will:
 - Check for Python 3 and Node.js
@@ -344,15 +372,18 @@ ollama serve
 ollama pull llama3.2:3b
 ```
 
+> **Linux users with NVIDIA GPU:** See the [Linux GPU Setup](#linux-gpu-setup-nvidia) section above to ensure GPU inference is enabled before pulling a model.
+
 ---
 
 ## Running the Application
 
-You need **three terminals** running simultaneously.
+You need **three terminals** running simultaneously. The commands are identical on macOS and Linux.
 
 ### Terminal 1 — Ollama (LLM Runtime)
 
 ```bash
+# Same on macOS and Linux
 ollama serve
 ```
 
@@ -361,9 +392,10 @@ ollama serve
 ### Terminal 2 — Backend (FastAPI)
 
 ```bash
+# Same on macOS and Linux
 cd cfi_project/
 source venv/bin/activate
-PYTHONPATH=. uvicorn backend.main:app --reload --port 8000
+PYTHONPATH=. uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 The backend will be available at: **http://localhost:8000**
@@ -371,6 +403,7 @@ The backend will be available at: **http://localhost:8000**
 ### Terminal 3 — Frontend (React + Vite)
 
 ```bash
+# Same on macOS and Linux
 cd cfi_project/frontend/
 npm run dev
 ```
@@ -457,7 +490,7 @@ All endpoints (except `/api/auth/login` and `/api/auth/register`) require a **Be
 ```
 cfi_project/
 │
-├── setup.sh                    # Automated setup script
+├── setup.sh                    # Automated setup script (macOS + Linux)
 ├── requirements.txt            # Python package dependencies
 ├── .env                        # Environment configuration
 │
@@ -549,11 +582,85 @@ cfi_project/
 | **Local LLM quality** | Response accuracy is bounded by the capability of the selected Ollama model. Smaller models (3B parameters) may hallucinate or miss nuanced connections. |
 | **Single-node deployment** | The system is designed for a single investigator workstation. It is not load-balanced or horizontally scalable in its current form. |
 | **SQLite concurrency** | SQLite does not support high write concurrency. Heavy parallel ingestion jobs may queue. Suitable for teams of 1–5 investigators. |
-| **Disk image support** | pyewf and pytsk3 require native C libraries. On macOS, installation can fail on certain configurations. Fallback to file-based evidence is automatic. |
+| **Disk image support** | pyewf and pytsk3 require native C libraries. On macOS, installation can fail on certain configurations. On Linux, install `libewf-dev ewf-tools` first. Fallback to file-based evidence is automatic. |
 | **No email notifications** | Password reset and workflow notifications rely on Admin action rather than SMTP email, by design (air-gapped deployment). |
-| **Whisper speed** | Audio transcription via Whisper is slow without a CUDA-capable GPU. Large audio files may take several minutes to ingest. |
+| **Whisper speed** | Audio transcription via Whisper is slow without a CUDA-capable GPU. Large audio files may take several minutes to ingest. Linux users with NVIDIA GPUs get significantly faster transcription. |
 | **Map data** | The geographic map requires a Leaflet tile server or internet access for map tiles. In a fully air-gapped environment, a local tile server must be configured. |
 | **spaCy NER accuracy** | NER quality depends on the language model. Highly technical forensic jargon, code, or non-English content may not be correctly classified. |
+
+---
+
+## Troubleshooting
+
+### Ollama using CPU instead of GPU (Linux)
+
+If inference is slow on Linux, verify your NVIDIA driver is installed and at version 570+:
+
+```bash
+nvidia-smi  # Check driver version — must be 570+
+sudo apt install nvidia-driver-570
+sudo reboot
+```
+
+After reboot, run `nvidia-smi` again to confirm the GPU is visible, then restart `ollama serve`.
+
+---
+
+### pyewf not installing
+
+`.E01` disk image support requires libewf. If it fails to build, **all other file types** (PDF, DOCX, audio, images, etc.) still work normally without it.
+
+```bash
+# Linux
+sudo apt install libewf-dev ewf-tools
+pip install libewf-python
+
+# macOS
+brew install libewf
+pip install libewf-python
+```
+
+---
+
+### Port already in use
+
+```bash
+# Find and kill whatever is using port 8000
+lsof -i :8000
+kill -9 <PID>
+```
+
+---
+
+### spaCy model missing
+
+If you see `OSError: [E050] Can't find model 'en_core_web_lg'`:
+
+```bash
+source venv/bin/activate
+python3 -m spacy download en_core_web_lg
+```
+
+---
+
+### Permission denied on setup.sh (Linux)
+
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+---
+
+### Node.js version too old (Linux)
+
+Ubuntu's default `apt` repository may install an older Node.js. If you need Node 18+:
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+node --version  # Should show v18+
+```
 
 ---
 
