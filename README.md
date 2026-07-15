@@ -334,17 +334,8 @@ python3 -m spacy download en_core_web_lg
 ### Step 2 — Database Initialisation
 
 ```bash
-# Run all migrations in order
-PYTHONPATH=. python3 backend/migrate_auth.py
-PYTHONPATH=. python3 backend/migrate_queue.py
-PYTHONPATH=. python3 backend/migrate_security.py
-PYTHONPATH=. python3 backend/migrate_entropy.py
-PYTHONPATH=. python3 backend/migrate_geo.py
-PYTHONPATH=. python3 backend/migrate_watchlist.py
-PYTHONPATH=. python3 backend/migrate_filestore.py
-
-# Initialise all tables
-PYTHONPATH=. python3 -c "from backend.database import init_db; init_db()"
+# Run all migrations with the master script
+PYTHONPATH=. python3 backend/migrate_all.py
 ```
 
 ### Step 3 — Data Directories
