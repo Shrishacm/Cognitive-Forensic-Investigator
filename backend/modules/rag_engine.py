@@ -7,44 +7,118 @@ from backend.dependencies import get_settings
 import re
 import time
 
-SYSTEM_PROMPT = """You are a forensic evidence analysis assistant
-operating under strict legal rules.
+SYSTEM_PROMPT = """You are a forensic evidence analysis assistant.
+Your job is to answer questions using ONLY the Evidence Excerpts provided below.
 
-ABSOLUTE RULES:
-1. Every sentence MUST end with a citation:
-   [Source: filename | Confidence: X.XX]
-2. If you cannot cite a sentence, do not write that sentence.
-3. If evidence is insufficient, respond with:
+RULES:
+1. Always attempt to answer from the provided evidence.
+2. For every sentence you write, add a citation at the END of that
+   sentence in this exact format:
+   [Source: filename | Confidence: 0.85]
+   Use the Source and Confidence values from the matching excerpt.
+   Every individual sentence must have its own citation.
+3. If the evidence excerpts do not contain information relevant
+   to the question, respond ONLY with:
    INSUFFICIENT EVIDENCE: The provided documents do not contain
-   enough information.
-4. Never use your training knowledge.
-5. Never infer connections not in the evidence.
-6. You may use the conversation history below to understand
-   follow-up questions, but STILL cite every claim from the
-   evidence excerpts provided.
+   enough information to answer this question.
+4. Do NOT use any knowledge from your training data.
+5. Do NOT infer or guess connections that are not in the evidence.
+6. Do NOT refuse to answer — always engage with the evidence.
 """
 
 
 def reformat_citations(response: str) -> str:
-    pattern = (r'(\[Source:[^\]]+\])\s+'
-               r'(.+?)(?=\[Source:|$)')
+    """
+    Handles two citation patterns Ollama produces:
 
-    def move_citation(match):
-        citation = match.group(1)
-        sentence = match.group(2).strip()
-        if sentence.endswith('.'):
-            return f"{sentence[:-1]}. {citation}\n"
-        return f"{sentence}. {citation}\n"
+    Pattern A — citation BEFORE the paragraph (Ollama's most common output):
+      [Source: file.txt | Confidence: 0.85]
+      Sentence one. Sentence two. Sentence three.
+      → Distribute the citation to every sentence in the paragraph.
 
-    reformatted = re.sub(
-        pattern, move_citation,
-        response, flags=re.DOTALL)
-    reformatted = '\n'.join(
-        line.strip()
-        for line in reformatted.splitlines()
-        if line.strip()
+    Pattern B — citation AFTER each sentence (ideal, already correct):
+      Sentence one. [Source: file.txt | Confidence: 0.85]
+      → Leave as-is.
+    """
+    paragraphs = re.split(r'\n{2,}', response.strip())
+    output_paragraphs = []
+
+    for para in paragraphs:
+        para = para.strip()
+        if not para:
+            continue
+
+        # Pattern A: paragraph starts with a [Source: ...] citation
+        leading = re.match(
+            r'^(\[Source:[^\]]+\])\s*(.*)',
+            para, re.DOTALL
+        )
+        if leading:
+            citation = leading.group(1)
+            body = leading.group(2).strip()
+            if not body:
+                # Bare citation line with no text — skip it
+                continue
+            # Split body into sentences and append the citation to each
+            sents = re.split(r'(?<=[.!?])\s+', body)
+            new_sents = []
+            for s in sents:
+                s = s.strip()
+                if not s:
+                    continue
+                if '[Source:' in s:
+                    # Already has its own citation
+                    new_sents.append(s)
+                else:
+                    # Append the block-level citation
+                    end = s[-1] if s else '.'
+                    if end not in '.!?':
+                        new_sents.append(f"{s}. {citation}")
+                    else:
+                        new_sents.append(f"{s} {citation}")
+            output_paragraphs.append(' '.join(new_sents))
+        else:
+            # Pattern B: inline citations — leave paragraph unchanged
+            output_paragraphs.append(para)
+
+    result = '\n\n'.join(output_paragraphs)
+    return result if result else response
+
+
+def resolve_excerpt_refs(
+        response: str,
+        chunks: list) -> str:
+    """
+    Ollama often cites using informal shorthand like:
+      (Excerpt 1)  (Excerpts 1-3)  (Excerpts 1, 4)
+    This function replaces those with proper tags:
+      [Source: filename | Confidence: 0.85]
+    so enforce_citations can detect and count them.
+    """
+    if not chunks:
+        return response
+
+    def replace_ref(match):
+        # Pull the first excerpt number from the match
+        nums = re.findall(r'\d+', match.group(0))
+        if not nums:
+            return match.group(0)
+        idx = int(nums[0]) - 1  # excerpts are 1-indexed
+        if 0 <= idx < len(chunks):
+            c = chunks[idx]
+            return (
+                f"[Source: {c['source']} "
+                f"| Confidence: {c['score']}]"
+            )
+        return match.group(0)
+
+    # Match: (Excerpt 1), (Excerpts 1-3), (Excerpts 1, 2, 4)
+    return re.sub(
+        r'\(Excerpts?\s+[\d,\s\u2013\-]+\)',
+        replace_ref,
+        response,
+        flags=re.IGNORECASE
     )
-    return reformatted if reformatted else response
 
 
 def enforce_citations(response: str) -> tuple[
@@ -175,8 +249,11 @@ def run_rag_query(
         raw_answer = generate_response(
             full_prompt, SYSTEM_PROMPT)
 
-    # Step 7: Process response
-    reformatted = reformat_citations(raw_answer)
+    # Step 7: Resolve informal (Excerpt N) refs → [Source: ...] tags
+    resolved = resolve_excerpt_refs(raw_answer, chunks)
+
+    # Step 8: Reformat and enforce citations
+    reformatted = reformat_citations(resolved)
     (processed, cited_count,
      uncited_count) = enforce_citations(reformatted)
 
