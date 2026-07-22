@@ -27,6 +27,7 @@ import ConfirmDialog from "../components/ConfirmDialog"
 import PageLayout from "../components/PageLayout"
 import toast from "react-hot-toast"
 import { formatDistanceToNow } from "date-fns"
+import { fromUtc } from '../utils/time'
 import useWebSocket from "../hooks/useWebSocket"
 
 // ── Supported format groups ────────────────────────────────
@@ -1034,8 +1035,8 @@ export default function EvidencePage() {
                     </div>
                     <span className="text-[10px] text-ink-2 whitespace-nowrap">
                       {job.completed_at 
-                        ? new Date(job.completed_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                        : (job.updated_at ? new Date(job.updated_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '—')}
+                        ? fromUtc(job.completed_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                        : (job.updated_at ? fromUtc(job.updated_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '—')}
                     </span>
                   </div>
                 )

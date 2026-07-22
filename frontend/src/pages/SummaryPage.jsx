@@ -8,6 +8,7 @@ import { generateCaseSummary, getLatestSummary } from '../api/client'
 import PageLayout from '../components/PageLayout'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
+import { fromUtc } from '../utils/time'
 
 // ── Simple markdown → HTML renderer ──────────────────────────────────────────
 function renderMarkdown(text) {
@@ -203,7 +204,7 @@ export default function SummaryPage() {
             Generated{' '}
             {(() => {
               try {
-                return formatDistanceToNow(new Date(meta.generated_at), { addSuffix: true })
+                return formatDistanceToNow(fromUtc(meta.generated_at), { addSuffix: true })
               } catch {
                 return 'recently'
               }

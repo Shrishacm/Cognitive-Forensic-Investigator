@@ -19,6 +19,7 @@ import { useAuth } from
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from
   'date-fns'
+import { fromUtc } from '../utils/time'
 import PageLayout from '../components/PageLayout'
 
 // Renders AI response with citations
@@ -29,7 +30,7 @@ function ResponseText({ text }) {
       fontStyle: 'italic',
       fontSize: 12,
     }}>
-      No response
+      The AI did not return a response for this query. Try rephrasing your question.
     </p>
   )
 
@@ -206,8 +207,7 @@ function SummaryModal({ caseId, onClose }) {
               }}>
                 Generated{' '}
                 {formatDistanceToNow(
-                  new Date(
-                    existing.generated_at),
+                  fromUtc(existing.generated_at),
                   { addSuffix: true }
                 )}{' '}
                 by {existing.generated_by}
@@ -416,6 +416,16 @@ export default function InvestigatePage() {
     loadData()
   }, [caseId])
 
+  // Scroll to the latest message whenever history finishes loading
+  useEffect(() => {
+    if (!loadingHistory) {
+      setTimeout(() => {
+        bottomRef.current?.scrollIntoView(
+          { behavior: 'instant' })
+      }, 50)
+    }
+  }, [loadingHistory])
+
   const loadData = async () => {
     setLoadingHistory(true)
     try {
@@ -527,14 +537,21 @@ export default function InvestigatePage() {
           conversation_history: history
         })
 
-      // Replace temp entry with real
+      // Replace temp entry with real result.
+      // NOTE: POST /ask returns "answer" but the
+      // query list renders "processed_response" —
+      // map the field so the response shows immediately
+      // without a page reload.
       setQueries(prev => prev.map(p =>
         p.id === tempId
-          ? { ...res.data,
+          ? {
+              ...res.data,
+              id: res.data.query_id,
               question_text: q,
-              asked_at:
-                new Date().toISOString(),
-              is_loading: false }
+              processed_response: res.data.answer,
+              asked_at: new Date().toISOString(),
+              is_loading: false,
+            }
           : p
       ))
     } catch (e) {
@@ -932,8 +949,7 @@ export default function InvestigatePage() {
                         {q.asked_by}
                         {' '}·{' '}
                         {formatDistanceToNow(
-                          new Date(
-                            q.asked_at),
+                          fromUtc(q.asked_at),
                           { addSuffix: true }
                         )}
                       </span>

@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext'
 import AnimStatCard from '../components/AnimStatCard'
 import Badge from '../components/Badge'
 import { formatDistanceToNow } from 'date-fns'
+import { fromUtc } from '../utils/time'
 import toast from 'react-hot-toast'
 import { ACTION_META } from '../constants/activityMeta'
 
@@ -391,7 +392,7 @@ export default function DashboardPage() {
                     flexShrink: 0,
                     whiteSpace: 'nowrap',
                   }}>
-                    {formatDistanceToNow(new Date(event.at), { addSuffix: true })}
+                    {formatDistanceToNow(fromUtc(event.at), { addSuffix: true })}
                   </span>
                 </div>
               )

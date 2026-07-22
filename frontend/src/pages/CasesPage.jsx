@@ -7,6 +7,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import PageLayout from '../components/PageLayout'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
+import { fromUtc } from '../utils/time'
 
 export default function CasesPage({ setActiveCaseId }) {
   const navigate = useNavigate()
@@ -252,7 +253,7 @@ export default function CasesPage({ setActiveCaseId }) {
                     {c.evidence_count} evidence · {c.query_count} queries
                   </span>
                   <span className="text-xs text-ink-2 ml-auto">
-                    {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
+                    {formatDistanceToNow(fromUtc(c.created_at), { addSuffix: true })}
                   </span>
                 </div>
               </div>

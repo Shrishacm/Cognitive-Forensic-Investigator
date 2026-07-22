@@ -5,6 +5,7 @@ import { getAuditLog } from '../api/client'
 import PageLayout from '../components/PageLayout'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow, format } from 'date-fns'
+import { fromUtc } from '../utils/time'
 
 const ACTION_COLORS = {
   CASE_CREATED:    'text-blue-400 bg-blue-500/10',
@@ -116,10 +117,10 @@ export default function AuditPage() {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-xs text-ink-2">
-                        {formatDistanceToNow(new Date(log.performed_at), { addSuffix: true })}
+                        {formatDistanceToNow(fromUtc(log.performed_at), { addSuffix: true })}
                       </p>
                       <p className="text-xs text-ink-2 font-mono">
-                        {format(new Date(log.performed_at), 'HH:mm:ss')}
+                        {format(fromUtc(log.performed_at), 'HH:mm:ss')}
                       </p>
                     </div>
                   </div>

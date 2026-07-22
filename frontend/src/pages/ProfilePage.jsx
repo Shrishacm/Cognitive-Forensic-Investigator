@@ -10,6 +10,7 @@ import Badge from '../components/Badge'
 import PageLayout from '../components/PageLayout'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
+import { fromUtc } from '../utils/time'
 
 const TYPE_ICON = {
   Person:       User,
@@ -285,7 +286,7 @@ export default function ProfilePage() {
                           {profileMeta.generated_at && (() => {
                             try {
                               return formatDistanceToNow(
-                                new Date(profileMeta.generated_at),
+                                fromUtc(profileMeta.generated_at),
                                 { addSuffix: true }
                               )
                             } catch {

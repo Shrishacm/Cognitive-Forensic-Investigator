@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { Zap, RefreshCw, AlertTriangle, CheckCircle, Search } from 'lucide-react'
 import { detectContradictions, getLatestContradictions } from '../api/client'
 import { formatDistanceToNow } from 'date-fns'
+import { fromUtc } from '../utils/time'
 import toast from 'react-hot-toast'
 import PageLayout from '../components/PageLayout'
 
@@ -118,7 +119,7 @@ export default function ContradictionsPage() {
               color: 'var(--color-white-2)',
               marginLeft: 'auto',
             }}>
-              {formatDistanceToNow(new Date(meta.generated_at), { addSuffix: true })} by {meta.generated_by}
+              {formatDistanceToNow(fromUtc(meta.generated_at), { addSuffix: true })} by {meta.generated_by}
             </span>
           )}
         </div>

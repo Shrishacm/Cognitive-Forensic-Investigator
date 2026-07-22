@@ -7,6 +7,7 @@ import { getQueueList, deleteQueueJob, addToQueue } from '../api/client'
 import PageLayout from '../components/PageLayout'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow, intervalToDuration } from 'date-fns'
+import { fromUtc } from '../utils/time'
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -64,7 +65,7 @@ function elapsed(seconds) {
 function timeAgo(dateStr) {
   if (!dateStr) return '—'
   try {
-    return formatDistanceToNow(new Date(dateStr), { addSuffix: true })
+    return formatDistanceToNow(fromUtc(dateStr), { addSuffix: true })
   } catch {
     return '—'
   }

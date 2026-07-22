@@ -10,6 +10,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import PageLayout from '../components/PageLayout'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
+import { fromUtc } from '../utils/time'
 
 const ROLES = ['Viewer', 'Analyst', 'Investigator', 'Admin']
 
@@ -225,7 +226,7 @@ export default function AdminUsersPage() {
                   ? (() => {
                       try {
                         return formatDistanceToNow(
-                          new Date(u.last_login), { addSuffix: true })
+                          fromUtc(u.last_login), { addSuffix: true })
                       } catch {
                         return 'Unknown'
                       }

@@ -9,6 +9,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import PageLayout from '../components/PageLayout'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
+import { fromUtc } from '../utils/time'
 
 const REPORT_TYPES = [
   {
@@ -335,8 +336,7 @@ export default function ReportsPage() {
                       {' '}{report.generated_by}
                       {' · '}
                       {formatDistanceToNow(
-                        new Date(
-                          report.generated_at),
+                        fromUtc(report.generated_at),
                         { addSuffix: true }
                       )}
                       {report.page_count > 0 

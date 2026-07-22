@@ -50,7 +50,7 @@ def generate_response(prompt: str,
                 "stream": False,
                 "options": {
                     "temperature": 0.1,
-                    "num_predict": 512
+                    "num_predict": 1024
                 }
             },
             timeout=120

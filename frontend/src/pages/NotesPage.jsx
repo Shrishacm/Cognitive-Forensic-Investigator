@@ -6,6 +6,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import PageLayout from '../components/PageLayout'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
+import { fromUtc } from '../utils/time'
 
 export default function NotesPage() {
   const { caseId } = useParams()
@@ -162,7 +163,7 @@ export default function NotesPage() {
                   <div className="flex items-center gap-3 mt-2">
                     <span className="text-xs text-ink-2 font-medium">{n.author}</span>
                     <span className="text-xs text-ink-2">
-                      {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                      {formatDistanceToNow(fromUtc(n.created_at), { addSuffix: true })}
                     </span>
                     {n.linked_to_type && (
                       <span className="flex items-center gap-1 text-xs text-accent-light">

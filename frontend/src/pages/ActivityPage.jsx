@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Search, Filter, X, ChevronLeft, ChevronRight, Activity, Clock, User, FolderOpen, Download, RefreshCw, ExternalLink } from 'lucide-react'
 import { getGlobalActivity } from '../api/client'
 import { format, formatDistanceToNow } from 'date-fns'
+import { fromUtc } from '../utils/time'
 import toast from 'react-hot-toast'
 import { ACTION_META } from '../constants/activityMeta'
 import PageLayout from '../components/PageLayout'
@@ -149,7 +150,7 @@ export default function ActivityPage() {
                   })()}
                 </div>
                 <div><span style={{ fontSize: 11, color: 'var(--color-white-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }} title={JSON.stringify(item.details)}>{detailStr || '—'}</span></div>
-                <div><span style={{ fontSize: 11, color: 'var(--color-white-3)' }} title={format(new Date(item.performed_at), 'PPpp')}>{formatDistanceToNow(new Date(item.performed_at), { addSuffix: true })}</span></div>
+                <div><span style={{ fontSize: 11, color: 'var(--color-white-3)' }} title={format(fromUtc(item.performed_at), 'PPpp')}>{formatDistanceToNow(fromUtc(item.performed_at), { addSuffix: true })}</span></div>
               </div>
             )
           })
