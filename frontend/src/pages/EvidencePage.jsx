@@ -20,7 +20,8 @@ import {
   getSystemInfo, addToQueue, estimateTime,
   getStorageStats,
   getQueue, getQueueHistory, cancelJob,
-  forceStartJob, stopJob, updateJobSettings
+  forceStartJob, stopJob, updateJobSettings,
+  getHardwarePreference, updateHardwarePreference
 } from "../api/client"
 import Badge from "../components/Badge"
 import ConfirmDialog from "../components/ConfirmDialog"
@@ -301,19 +302,31 @@ function InstructionsPanel() {
 
 // ── Queue Settings Modal ────────────────────────────────────
 function QueueModal({ ev, onClose, onQueue }) {
-  const [cpu, setCpu]     = useState(70)
-  const [ram, setRam]     = useState(2)
-  const [saving, setSaving] = useState(false)
+  const [cpu, setCpu]         = useState(70)
+  const [ram, setRam]         = useState(2)
+  const [hwMode, setHwMode]   = useState('auto')
+  const [gpuInfo, setGpuInfo] = useState(null)
+  const [saving, setSaving]   = useState(false)
+
+  useEffect(() => {
+    getHardwarePreference().then(res => {
+      if (res.data?.hardware_mode) setHwMode(res.data.hardware_mode)
+      if (res.data?.gpu_info) setGpuInfo(res.data.gpu_info)
+    }).catch(() => {})
+  }, [])
 
   const handleQueue = async () => {
     setSaving(true)
+    try {
+      await updateHardwarePreference({ hardware_mode: hwMode })
+    } catch {}
     await onQueue(cpu, ram)
     setSaving(false)
   }
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface-2 border border-line rounded-2xl w-full max-w-sm shadow-2xl">
+      <div className="bg-surface-2 border border-line rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-line">
           <div className="flex items-center gap-2">
             <Sliders size={16} className="text-accent" />
@@ -324,10 +337,40 @@ function QueueModal({ ev, onClose, onQueue }) {
           </button>
         </div>
 
-        <div className="p-5 space-y-5">
+        <div className="p-5 space-y-4">
           <div className="flex items-center gap-2 bg-surface-1 rounded-lg px-3 py-2">
             <p className="text-xs text-ink-0 truncate" title={ev.original_filename}>
-              Queueing: <span className="font-semibold">{ev.original_filename}</span>
+              Queueing: <span className="font-semibold text-accent">{ev.original_filename}</span>
+            </p>
+          </div>
+
+          {/* Compute Device Selector */}
+          <div>
+            <label className="text-xs font-semibold text-ink-0 flex items-center gap-1.5 mb-2">
+              <Zap size={12} className="text-emerald-400" /> Ingestion Hardware Accelerator
+            </label>
+            <div className="grid grid-cols-3 gap-1.5 bg-surface-1 p-1 rounded-lg border border-line">
+              {[
+                { id: 'auto', label: '⚡ Auto' },
+                { id: 'cuda', label: '🚀 GPU' },
+                { id: 'cpu', label: '💻 CPU' }
+              ].map(m => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setHwMode(m.id)}
+                  className={`py-1.5 px-2 rounded-md text-[11px] font-semibold transition-all ${
+                    hwMode === m.id
+                      ? 'bg-accent text-white shadow-sm'
+                      : 'text-ink-2 hover:text-ink-0'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-emerald-400/80 mt-1">
+              {gpuInfo?.gpu_name ? `Detected GPU: ${gpuInfo.gpu_name}` : 'Auto GPU acceleration enabled'}
             </p>
           </div>
 

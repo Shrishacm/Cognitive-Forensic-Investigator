@@ -150,6 +150,16 @@ def ask_question(
         )
 
     try:
+        case_info = {
+            "name": case.case_name,
+            "number": case.case_number,
+            "status": case.status,
+            "priority": case.priority,
+            "description": case.description,
+            "tags": case.tags,
+            "evidence_files": [e.original_filename for e in case.evidence]
+        }
+
         # Run RAG pipeline
         result = run_rag_query(
             query=body.question_text,
@@ -158,7 +168,8 @@ def ask_question(
             cases_dir=settings.cases_dir,
             evidence_id=body.evidence_id,
             asked_by=body.asked_by,
-            conversation_history=body.conversation_history
+            conversation_history=body.conversation_history,
+            case_info=case_info
         )
 
         # Save to QueryLog

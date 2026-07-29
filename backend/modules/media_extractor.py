@@ -119,15 +119,16 @@ MAX_AUDIO_DURATION_SECONDS = 1800
 
 def _get_whisper_model():
     """
-    Loads the Whisper 'tiny' model on first
-    use. Tiny uses ~39 MB RAM — safe for M1
-    8 GB machines. Model is cached globally.
+    Loads the Whisper 'tiny' model on first use on CUDA GPU or CPU.
     """
     global _WHISPER_MODEL
     if _WHISPER_MODEL is None:
-        print("[MEDIA] Loading Whisper tiny model…")
-        _WHISPER_MODEL = whisper.load_model("tiny")
-        print("[MEDIA] Whisper model loaded")
+        import torch
+        mode = os.getenv("HARDWARE_MODE", "auto").lower()
+        device = "cuda" if (mode != "cpu" and torch.cuda.is_available()) else "cpu"
+        print(f"[MEDIA] Loading Whisper tiny model on device: {device.upper()}…")
+        _WHISPER_MODEL = whisper.load_model("tiny", device=device)
+        print(f"[MEDIA] Whisper model loaded on {device.upper()}")
     return _WHISPER_MODEL
 
 

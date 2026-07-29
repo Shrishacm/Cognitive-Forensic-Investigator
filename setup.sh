@@ -98,7 +98,12 @@ echo ""
 echo -e "${YELLOW}[4/8] Installing Python packages...${NC}"
 pip install -q --upgrade pip setuptools wheel
 pip install -q -r requirements.txt
-echo -e "${GREEN}✓ Python packages installed${NC}"
+echo -e "${GREEN}✓ Standard Python packages installed${NC}"
+
+echo ""
+echo -e "${YELLOW}[4.5/8] Resolving hardware-accelerated ML dependencies...${NC}"
+python3 install_gpu_deps.py
+echo -e "${GREEN}✓ Hardware-accelerated dependencies installed${NC}"
 
 # ── 5. spaCy NLP model ────────────────────────────────────────────────────────
 echo ""

@@ -30,6 +30,7 @@ def force_start_job(job_id: str):
         if job_id in _job_stop_events:
             _job_stop_events[job_id].clear()
     print(f"[WORKER] Force-start override set for job {job_id[:8]}")
+    start_worker()
 
 
 def stop_job(job_id: str):
@@ -118,7 +119,8 @@ def stop_worker():
 
 
 def _broadcast_progress(case_id: str, job_id: str, evidence_id: str,
-                         percent: int, step: str, status: str = "Running"):
+                         percent: int, step: str, status: str = "Running",
+                         eta_seconds: int = None):
     """
     Emits INGESTION_PROGRESS over WebSocket so the frontend
     can update the queue page in real time without polling.
@@ -137,6 +139,7 @@ def _broadcast_progress(case_id: str, job_id: str, evidence_id: str,
                     "percent":        percent,
                     "step":           step,
                     "status":         status,
+                    "eta_seconds":    eta_seconds,
                 },
             )
         )
@@ -299,7 +302,7 @@ def _process_job(job):
         finally:
             _cleanup_job(job_id_str)
 
-    except Exception as e:
+    except (Exception, BaseException) as e:
         print(f"[WORKER] Job failed: {e}")
         import traceback
         traceback.print_exc()

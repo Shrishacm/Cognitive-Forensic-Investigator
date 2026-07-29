@@ -44,6 +44,12 @@ export const getPreferences = () =>
 export const updatePreferences = (data) =>
   api.put('/auth/preferences', data)
 
+export const getHardwarePreference = () =>
+  api.get('/queue/hardware-preference')
+
+export const updateHardwarePreference = (data) =>
+  api.post('/queue/hardware-preference', data)
+
 export const getUsers = () =>
   api.get('/auth/users')
 
@@ -238,7 +244,13 @@ export const getQueueList = () =>
   api.get('/queue/list')
 
 export const deleteQueueJob = (jobId) =>
-  api.delete(`/queue/${jobId}`)
+  api.delete(`/queue/${jobId}/cancel`)
+
+export const stopQueueJob = (jobId) =>
+  api.post(`/queue/${jobId}/stop`)
+
+export const getIngestionLogs = (caseId, lines = 200) =>
+  api.get(`/queue/${caseId}/logs?lines=${lines}`).then(r => r.data)
 
 // File Viewer
 export const viewArtifactFile = (caseId, artifactId) =>

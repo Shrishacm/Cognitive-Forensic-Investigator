@@ -14,6 +14,74 @@ import uuid
 import os
 import tempfile
 from datetime import datetime
+import logging
+
+import threading
+import queue
+import asyncio
+
+class WebSocketLogHandler(logging.Handler):
+    def __init__(self, case_id):
+        super().__init__()
+        self.case_id = case_id
+        self.log_queue = queue.Queue()
+        self.worker_thread = threading.Thread(target=self._worker, daemon=True)
+        self.worker_thread.start()
+
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            self.log_queue.put(msg)
+        except Exception:
+            self.handleError(record)
+            
+    def _worker(self):
+        from backend.main import _notify_case
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        while True:
+            try:
+                # Batch logs every 0.1s or send immediately
+                logs = []
+                logs.append(self.log_queue.get())
+                while not self.log_queue.empty() and len(logs) < 100:
+                    logs.append(self.log_queue.get_nowait())
+                
+                payload = {"log": "\n".join(logs) + "\n"}
+                loop.run_until_complete(_notify_case(self.case_id, "INGESTION_LOG", payload))
+            except Exception:
+                pass
+
+
+def get_case_logger(case_id: str):
+    logger = logging.getLogger(f"case_{case_id}")
+    if logger.handlers:
+        return logger
+    logger.setLevel(logging.DEBUG)
+    
+    # Console handler
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    
+    # File handler
+    log_dir = os.path.join(settings.cases_dir, case_id)
+    os.makedirs(log_dir, exist_ok=True)
+    fh = logging.FileHandler(os.path.join(log_dir, "ingestion.log"))
+    fh.setLevel(logging.DEBUG)
+    
+    formatter = logging.Formatter('%(asctime)s - [%(levelname)s] - %(message)s')
+    ch.setFormatter(formatter)
+    fh.setFormatter(formatter)
+    
+    ws_handler = WebSocketLogHandler(case_id)
+    ws_handler.setLevel(logging.DEBUG)
+    ws_handler.setFormatter(formatter)
+    
+    logger.addHandler(ch)
+    logger.addHandler(fh)
+    logger.addHandler(ws_handler)
+    return logger
+
 
 settings = get_settings()
 
@@ -52,7 +120,7 @@ def _is_forensic_image(filename: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def _update_job_progress(job_id: str, percent: int, step: str):
+def _update_job_progress(job_id: str, percent: int, step: str, eta: int = None, elapsed: int = 0):
     """Updates job progress in DB."""
     if not job_id:
         return
@@ -62,6 +130,10 @@ def _update_job_progress(job_id: str, percent: int, step: str):
         if job:
             job.progress_percent = percent
             job.current_step = step
+            if eta is not None:
+                job.estimated_seconds = eta
+            if elapsed:
+                job.elapsed_seconds = elapsed
             db.commit()
     except Exception as e:
         print(f"[INGESTION] Progress update error: {e}")
@@ -88,16 +160,26 @@ def run_ingestion_with_progress(
     stop_check() returns True when user has requested a stop.
     """
     if governor is None:
-        governor = ResourceGovernor()
+        governor = ResourceGovernor(force_override=True, cpu_throttle_percent=100)
 
     # Store stop_check on governor so check_and_throttle can use it
     governor._stop_check = stop_check
 
+    import time
+    start_time = time.time()
+
     def _progress(percent: int, step: str):
-        _update_job_progress(job_id, percent, step)
+        eta_seconds = None
+        elapsed = 0
+        if 0 < percent < 100:
+            elapsed = time.time() - start_time
+            eta_seconds = int((elapsed / percent) * (100 - percent))
+            
+        _update_job_progress(job_id, percent, step, eta_seconds, int(elapsed))
+            
         if progress_callback and job_id and case_id:
             try:
-                progress_callback(case_id, job_id, evidence_id, percent, step)
+                progress_callback(case_id, job_id, evidence_id, percent, step, status="Running", eta_seconds=eta_seconds)
             except Exception:
                 pass
 
@@ -138,7 +220,7 @@ def run_ingestion_with_progress(
                 qdrant_path, db,
                 progress_callback=_progress)
 
-    except Exception as e:
+    except (Exception, BaseException) as e:
         print(f"[INGESTION] FAILED: {e}")
         import traceback
         traceback.print_exc()
@@ -210,6 +292,7 @@ def _run_document_with_progress(
         f"{settings.cases_dir}/{case_id}/qdrant")
 
     evidence_id = evidence.id
+    logger = get_case_logger(case_id)
 
     def _progress(percent: int, step: str):
         _update_job_progress(job_id, percent, step)
@@ -223,6 +306,7 @@ def _run_document_with_progress(
         
         ext = os.path.splitext(
             filename.lower())[1]
+        logger.info(f"Starting ingestion for {ext.upper()} file: {filename}")
         print(
             f"[INGESTION] {ext.upper()} "
             f"file: {filename}")
@@ -276,33 +360,67 @@ def _run_document_with_progress(
         governor.check_and_throttle()
         chunks = chunk_text(text)
         
-        _progress(40, f"Step 3/5: Embedding {len(chunks)} chunks")
-        BATCH = 20
-        chunk_count = 0
-        for i in range(0, len(chunks), BATCH):
-            batch = chunks[i:i+BATCH]
-            chunk_count += store_chunks(
-                chunks=batch,
+        _progress(40, f"Step 3-4/5: Parallel Embedding & Graph Building ({len(chunks)} chunks)")
+        logger.info(f"Generated {len(chunks)} text chunks. Starting parallel embedding and graph building.")
+        
+        def run_embeddings():
+            count = 0
+            i = 0
+            while i < len(chunks):
+                BATCH = governor.get_optimal_batch_size(base_batch=500) if governor else 500
+                batch = chunks[i:i+BATCH]
+                logger.debug(f"VectorStore: Sending batch {i//BATCH + 1} ({len(batch)} chunks) to embedder")
+                count += store_chunks(
+                    chunks=batch,
+                    source_filename=filename,
+                    evidence_id=evidence.id,
+                    case_id=case_id,
+                    qdrant_path=qdrant_path
+                )
+                i += len(batch)
+                progress = 40 + int((i / len(chunks)) * 30)
+                _progress(progress, f"Step 3/5: Embedding ({i}/{len(chunks)} chunks)")
+                logger.info(f"Embedded batch. Total chunks stored: {count}/{len(chunks)}")
+                if governor:
+                    governor.check_and_throttle()
+            logger.info("Finished embedding all chunks.")
+            return count
+
+        def run_graph():
+            logger.info("GraphBuilder: Starting entity extraction via SpaCy.")
+            governor.check_and_throttle()
+            # Subsample for NER on very large files — entities are repetitive
+            ner_chunks = chunks if len(chunks) <= 10000 else chunks[::3]
+            if len(ner_chunks) != len(chunks):
+                logger.info(f"Large file: subsampling {len(ner_chunks)}/{len(chunks)} chunks for NER")
+            res = build_graph(
+                chunks=ner_chunks,
                 source_filename=filename,
                 evidence_id=evidence.id,
                 case_id=case_id,
-                qdrant_path=qdrant_path
+                cases_dir=settings.cases_dir,
+                governor=governor
             )
-            progress = 40 + int((i / len(chunks)) * 30)
-            _progress(progress, f"Step 3/5: Embedding ({i+len(batch)}/{len(chunks)} chunks)")
-            governor.check_and_throttle()
+            logger.info("GraphBuilder: Finished entity extraction.")
+            return res
 
-
-        _progress(75, 'Step 4/5: Building entity graph')
-        governor.check_and_throttle()
-        entity_counts, extracted_entities = build_graph(
-            chunks=chunks,
-            source_filename=filename,
-            evidence_id=evidence.id,
-            case_id=case_id,
-            cases_dir=settings.cases_dir,
-            governor=governor
+        import concurrent.futures
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+        future_embed = executor.submit(run_embeddings)
+        future_graph = executor.submit(run_graph)
+        
+        done, not_done = concurrent.futures.wait(
+            [future_embed, future_graph],
+            return_when=concurrent.futures.FIRST_EXCEPTION
         )
+        for future in done:
+            if future.exception():
+                executor.shutdown(wait=False, cancel_futures=True)
+                raise future.exception()
+                
+        chunk_count = future_embed.result()
+        entity_counts, extracted_entities = future_graph.result()
+        executor.shutdown(wait=False)
 
         _progress(90, 'Step 5/5: Saving entities')
         governor.check_and_throttle()
@@ -370,10 +488,12 @@ def _run_document_with_progress(
         except Exception as cred_err:
             print(f"[INGESTION] Credential scan error: {cred_err}")
 
-        evidence.status = "Indexed"
-        evidence.chunk_count = chunk_count
-        evidence.entity_count = total_entities
-        db.commit()
+        evidence = db.query(models.Evidence).filter(models.Evidence.id == evidence_id).first()
+        if evidence:
+            evidence.status = "Indexed"
+            evidence.chunk_count = chunk_count
+            evidence.entity_count = total_entities
+            db.commit()
 
         _create_audit_log(
             db, case_id, "FILE_INGESTED",
@@ -445,15 +565,19 @@ def _run_forensic_with_progress(evidence, case_id, file_path,
       7. Update Evidence record
     """
     temp_dir = None
+    logger = get_case_logger(case_id)
     try:
 
+        logger.info(f"Starting Forensic Pipeline for image: {filename}")
         print(f"[FORENSIC] Starting: {filename}")
 
         # Step 1: Verify image hash
+        logger.info("Verifying image SHA-256 hash...")
         print(f"[FORENSIC] Verifying image SHA-256...")
         image_hash = compute_sha256(file_path)
         evidence.sha256_hash = image_hash
         db.commit()
+        logger.info(f"SHA-256 computed: {image_hash}")
         print(f"[FORENSIC] SHA-256: {image_hash[:16]}...")
 
         # Determine image type
@@ -463,13 +587,16 @@ def _run_forensic_with_progress(evidence, case_id, file_path,
         temp_dir = tempfile.mkdtemp(prefix="cfi_forensic_")
 
         _update_job_progress(job_id, 5, "Step 2: Mounting image")
+        logger.info(f"Mounting disk image using pytsk3...")
         print(f"[FORENSIC] Mounting image...")
         try:
             if ext == '.e01':
+                logger.debug("Image type detected as .E01")
                 file_generator = ingest_e01(
                     file_path, temp_dir,
                     include_deleted=include_deleted)
             else:
+                logger.debug(f"Image type detected as raw ({ext})")
                 file_generator = ingest_raw(
                     file_path, temp_dir,
                     include_deleted=include_deleted)
@@ -612,36 +739,73 @@ def _run_forensic_with_progress(evidence, case_id, file_path,
             print(f"[FORENSIC] Anomaly detection: "
                   f"{anomaly_count} anomalies found")
 
-            # Step 6: Feed all text into Qdrant
-            _update_job_progress(job_id, 70, "Step 5: Building vector index")
+            _update_job_progress(job_id, 70, "Step 5-6: Parallel Vector & Graph Build")
             governor.check_and_throttle()
-            print(f"[FORENSIC] Building vector index...")
+            logger.info("Building vector index and entity graph concurrently...")
+            print(f"[FORENSIC] Building vector index & entity graph concurrently...")
             # Limit to 500 files for memory safety on M1 8GB
             combined_text = "\n\n---\n\n".join(
                 all_chunk_texts[:500])
             chunks = chunk_text(combined_text)
-            total_chunks = store_chunks(
-                chunks=chunks,
-                source_filename=filename,
-                evidence_id=evidence.id,
-                case_id=case_id,
-                qdrant_path=qdrant_path
-            )
+            logger.info(f"Chunked forensic evidence into {len(chunks)} chunks.")
+            
+            def run_embeddings_forensic():
+                count = 0
+                i = 0
+                while i < len(chunks):
+                    BATCH = governor.get_optimal_batch_size(base_batch=500) if governor else 500
+                    batch = chunks[i:i+BATCH]
+                    logger.debug(f"VectorStore: Sending batch {i//BATCH + 1} ({len(batch)} chunks) to embedder")
+                    count += store_chunks(
+                        chunks=batch,
+                        source_filename=filename,
+                        evidence_id=evidence.id,
+                        case_id=case_id,
+                        qdrant_path=qdrant_path
+                    )
+                    i += len(batch)
+                    progress = 70 + int((i / len(chunks)) * 15)
+                    _update_job_progress(job_id, progress, f"Step 5: Building vector index ({i}/{len(chunks)} chunks)")
+                    logger.info(f"Embedded batch. Total chunks stored: {count}/{len(chunks)}")
+                    if governor:
+                        governor.check_and_throttle()
+                logger.info("Finished forensic embedding process.")
+                return count
 
-            # Build entity graph
-            _update_job_progress(job_id, 85, "Step 6: Building entity graph")
-            governor.check_and_throttle()
-            print(f"[FORENSIC] Building entity graph...")
-            _update_job_progress(job_id, 75, 'Step 4/5: Building entity graph')
-            governor.check_and_throttle()
-            entity_counts, extracted_entities = build_graph(
-                chunks=chunks,
-                source_filename=filename,
-                evidence_id=evidence.id,
-                case_id=case_id,
-                cases_dir=settings.cases_dir,
-                governor=governor
+            def run_graph_forensic():
+                logger.info("GraphBuilder: Starting entity extraction via SpaCy.")
+                governor.check_and_throttle()
+                ner_chunks = chunks if len(chunks) <= 10000 else chunks[::3]
+                if len(ner_chunks) != len(chunks):
+                    logger.info(f"Large file: subsampling {len(ner_chunks)}/{len(chunks)} chunks for NER")
+                res = build_graph(
+                    chunks=ner_chunks,
+                    source_filename=filename,
+                    evidence_id=evidence.id,
+                    case_id=case_id,
+                    cases_dir=settings.cases_dir,
+                    governor=governor
+                )
+                logger.info("GraphBuilder: Finished entity extraction.")
+                return res
+
+            import concurrent.futures
+            executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+            future_embed = executor.submit(run_embeddings_forensic)
+            future_graph = executor.submit(run_graph_forensic)
+            
+            done, not_done = concurrent.futures.wait(
+                [future_embed, future_graph],
+                return_when=concurrent.futures.FIRST_EXCEPTION
             )
+            for future in done:
+                if future.exception():
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    raise future.exception()
+            
+            total_chunks = future_embed.result()
+            entity_counts, extracted_entities = future_graph.result()
+            executor.shutdown(wait=False)
 
             # Save entities to DB
             _update_job_progress(job_id, 90, 'Step 5/5: Saving entities')
@@ -719,10 +883,12 @@ def _run_forensic_with_progress(evidence, case_id, file_path,
                 print(f"[FORENSIC] Credential scan error: {cred_err2}")
 
             # Step 7: Update Evidence record
-            evidence.status = "Indexed"
-            evidence.chunk_count = total_chunks
-            evidence.entity_count = total_entities
-            db.commit()
+            evidence = db.query(models.Evidence).filter(models.Evidence.id == evidence_id).first()
+            if evidence:
+                evidence.status = "Indexed"
+                evidence.chunk_count = total_chunks
+                evidence.entity_count = total_entities
+                db.commit()
 
             # Audit log
             _create_audit_log(
@@ -792,7 +958,7 @@ def _run_forensic_with_progress(evidence, case_id, file_path,
 
 def _save_entities_to_db(db, extracted_entities, case_id,
                          evidence_id, filename):
-    """Saves pre-extracted entities to DB."""
+    """Saves pre-extracted entities to DB using bulk operations."""
     all_entities = {}
     for ents in extracted_entities:
         for etype, names in {
@@ -811,16 +977,23 @@ def _save_entities_to_db(db, extracted_entities, case_id,
                     }
                 all_entities[key]["count"] += 1
 
+    if not all_entities:
+        return
+
+    # Bulk fetch existing entities for this case
+    existing_ents = db.query(models.Entity).filter(
+        models.Entity.case_id == case_id
+    ).all()
+    
+    existing_map = {f"{e.entity_type}:{e.name}": e for e in existing_ents}
+    
+    new_entities = []
+    
     for key, ent_data in all_entities.items():
-        existing = db.query(models.Entity).filter(
-            models.Entity.case_id == case_id,
-            models.Entity.name == ent_data["name"],
-            models.Entity.entity_type == ent_data["type"]
-        ).first()
-        if existing:
-            existing.frequency += ent_data["count"]
+        if key in existing_map:
+            existing_map[key].frequency += ent_data["count"]
         else:
-            db.add(models.Entity(
+            new_entities.append(models.Entity(
                 id=str(uuid.uuid4()),
                 case_id=case_id,
                 evidence_id=evidence_id,
@@ -829,6 +1002,9 @@ def _save_entities_to_db(db, extracted_entities, case_id,
                 frequency=ent_data["count"],
                 aliases=json.dumps([])
             ))
+
+    if new_entities:
+        db.bulk_save_objects(new_entities)
 
 
 def _create_audit_log(db, case_id, action_type, details):

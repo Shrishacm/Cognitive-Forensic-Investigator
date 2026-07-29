@@ -10,11 +10,13 @@ from backend.modules.time_estimator import (
     estimate_ingestion_time,
     estimate_queue_total)
 from backend.modules.resource_governor import (
-    get_system_info, suggest_resource_budget)
+    get_system_info, suggest_resource_budget, get_gpu_info)
 from pydantic import BaseModel
 from typing import Optional
 import uuid
 from datetime import datetime
+import re
+import os
 
 router = APIRouter(
     prefix="/queue",
@@ -30,6 +32,11 @@ class QueueJobRequest(BaseModel):
 class BulkQueueRequest(BaseModel):
     jobs: list[QueueJobRequest]
 
+class HardwarePreferenceRequest(BaseModel):
+    hardware_mode: str  # "auto", "cuda", "cpu"
+    vector_embedding_device: Optional[str] = "auto"
+    whisper_device: Optional[str] = "auto"
+
 @router.get("/system-info")
 def get_system_info_endpoint(
     current_user = Depends(get_current_user)
@@ -43,6 +50,53 @@ def get_system_info_endpoint(
     return {
         "system": info,
         "suggested_budget": budget
+    }
+
+@router.get("/hardware-preference")
+def get_hardware_preference(
+    current_user = Depends(get_current_user)
+):
+    gpu = get_gpu_info()
+    current_mode = os.getenv("HARDWARE_MODE", "auto").lower()
+    return {
+        "hardware_mode": current_mode,
+        "vector_embedding_device": "cuda" if current_mode != "cpu" else "cpu",
+        "whisper_device": "cuda" if current_mode != "cpu" else "cpu",
+        "gpu_info": gpu
+    }
+
+@router.post("/hardware-preference")
+def set_hardware_preference(
+    body: HardwarePreferenceRequest,
+    current_user = Depends(require_analyst)
+):
+    env_path = ".env"
+    mode = body.hardware_mode.lower()
+    if mode not in ["auto", "cuda", "cpu"]:
+        mode = "auto"
+
+    os.environ["HARDWARE_MODE"] = mode
+
+    try:
+        if os.path.exists(env_path):
+            with open(env_path, "r") as f:
+                content = f.read()
+            if "HARDWARE_MODE=" in content:
+                content = re.sub(r"HARDWARE_MODE=.*", f"HARDWARE_MODE={mode}", content)
+            else:
+                content += f"\nHARDWARE_MODE={mode}\n"
+            with open(env_path, "w") as f:
+                f.write(content)
+    except Exception as e:
+        print(f"Error updating .env: {e}")
+
+    gpu = get_gpu_info()
+
+    return {
+        "status": "success",
+        "message": f"Hardware compute preference updated to {mode.upper()}",
+        "hardware_mode": mode,
+        "gpu_info": gpu
     }
 
 @router.post("/estimate")
@@ -88,17 +142,20 @@ def add_to_queue(
     """
     Adds an evidence file to the ingestion queue.
     """
-    # Check not already queued
+    # Check if already queued or remove old job
     existing = db.query(
         models.IngestionJob
     ).filter(
-        models.IngestionJob.evidence_id == body.evidence_id,
-        models.IngestionJob.status.in_(["Queued", "Running"])
+        models.IngestionJob.evidence_id == body.evidence_id
     ).first()
     if existing:
-        raise HTTPException(
-            status_code=400,
-            detail="Already in queue")
+        if existing.status in ("Queued", "Running"):
+            raise HTTPException(
+                status_code=400,
+                detail="Already in queue")
+        else:
+            db.delete(existing)
+            db.commit()
 
     # Get queue position
     max_pos = db.query(
@@ -138,6 +195,10 @@ def add_to_queue(
         ev.status = "Queued"
         ev.ingestion_job_id = job.id
         db.commit()
+
+    # Ensure worker is running
+    from backend.modules.job_worker import start_worker
+    start_worker()
 
     return {
         "job_id": job.id,
@@ -193,7 +254,7 @@ def get_queue(
         "queue_position": j.queue_position,
         "progress_percent": j.progress_percent,
         "current_step": j.current_step,
-        "estimated_seconds": j.estimated_seconds,
+        "estimated_seconds": int(((datetime.utcnow() - j.started_at).total_seconds() / j.progress_percent) * (100 - j.progress_percent)) if j.status == 'Running' and j.progress_percent and j.progress_percent > 0 and j.started_at else j.estimated_seconds,
         "started_at": str(j.started_at) if j.started_at else None,
         "cpu_throttle_percent": j.cpu_throttle_percent,
         "min_free_ram_mb": j.min_free_ram_mb
@@ -261,8 +322,8 @@ def list_all_jobs(
             "progress_percent": j.progress_percent,
             "progress": j.progress_percent,   # alias for frontend compat
             "current_step": j.current_step,
-            "estimated_seconds": j.estimated_seconds,
-            "elapsed_seconds": j.elapsed_seconds,
+            "estimated_seconds": int(((datetime.utcnow() - j.started_at).total_seconds() / j.progress_percent) * (100 - j.progress_percent)) if j.status == 'Running' and j.progress_percent and j.progress_percent > 0 and j.started_at else j.estimated_seconds,
+            "elapsed_seconds": int((datetime.utcnow() - j.started_at).total_seconds()) if j.status == 'Running' and j.started_at else j.elapsed_seconds,
             "started_at": str(j.started_at) if j.started_at else None,
             "completed_at": str(j.completed_at) if j.completed_at else None,
             "error_message": j.error_message,
@@ -284,7 +345,7 @@ def cancel_job(
     current_user = Depends(require_investigator),
     db: Session = Depends(get_db)
 ):
-    """Cancels a queued job."""
+    """Cancels a queued or running job."""
     job = db.query(
         models.IngestionJob
     ).filter(
@@ -294,12 +355,13 @@ def cancel_job(
         raise HTTPException(
             status_code=404,
             detail="Job not found")
-    if job.status == "Running":
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot cancel a running job. Wait for it to complete or restart the server."
-        )
+
+    from backend.modules.job_worker import stop_job, _cleanup_job
+    stop_job(job_id)
+    _cleanup_job(job_id)
+
     job.status = "Cancelled"
+    job.current_step = "Cancelled by user"
     job.completed_at = datetime.utcnow()
     # Reset evidence status
     ev = db.query(
@@ -310,6 +372,28 @@ def cancel_job(
     if ev:
         ev.status = "Uploaded"
     db.commit()
+
+    # Emit WebSocket cancellation broadcast
+    try:
+        from backend.main import _notify_case
+        import asyncio
+        _loop = asyncio.new_event_loop()
+        _loop.run_until_complete(
+            _notify_case(
+                job.case_id,
+                "INGESTION_FAILED",
+                {
+                    "evidence_id": job.evidence_id,
+                    "message": "Ingestion cancelled by user",
+                    "job_id": job.id,
+                    "status": "Cancelled"
+                },
+            )
+        )
+        _loop.close()
+    except Exception:
+        pass
+
     return {"success": True}
 
 @router.delete("/{job_id}")
@@ -371,23 +455,41 @@ def force_start_job_endpoint(
     ).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    if job.status not in ("Queued", "Running"):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Job is {job.status} — can only force-start Queued or Running jobs"
-        )
 
-    from backend.modules.job_worker import force_start_job
+    from backend.modules.job_worker import force_start_job, start_worker
     force_start_job(job_id)
+    start_worker()
 
-    # Update DB to reflect override mode
-    job.current_step = (job.current_step or "") + " [OVERRIDE]"
+    job.status = "Queued"
+    job.current_step = "Force-starting..."
     db.commit()
+
+    # Broadcast WebSocket state update so frontend reflects change immediately
+    try:
+        from backend.main import _notify_case
+        import asyncio
+        _loop = asyncio.new_event_loop()
+        _loop.run_until_complete(
+            _notify_case(
+                job.case_id,
+                "INGESTION_PROGRESS",
+                {
+                    "job_id": job.id,
+                    "evidence_id": job.evidence_id,
+                    "percent": 0,
+                    "step": "Force-starting...",
+                    "status": "Queued",
+                },
+            )
+        )
+        _loop.close()
+    except Exception:
+        pass
 
     return {
         "ok": True,
         "job_id": job_id,
-        "message": "Force-start override activated — resource limits bypassed",
+        "message": "Force-start override activated — job starting immediately",
     }
 
 
@@ -402,32 +504,53 @@ def stop_job_endpoint(
     db: Session = Depends(get_db)
 ):
     """
-    Requests a graceful stop of a running ingestion job.
-    The current processing batch completes, then the job is marked
-    Stopped and the evidence reverts to Uploaded status so it can be
-    re-queued later.
+    Stops a running ingestion job immediately and reverts evidence status to Uploaded.
     """
     job = db.query(models.IngestionJob).filter(
         models.IngestionJob.id == job_id
     ).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    if job.status != "Running":
-        raise HTTPException(
-            status_code=400,
-            detail=f"Job is {job.status} — can only stop Running jobs"
-        )
 
     from backend.modules.job_worker import stop_job
     stop_job(job_id)
 
-    job.current_step = "Stopping…"
+    job.status = "Cancelled"
+    job.current_step = "Stopped by user"
+    job.completed_at = datetime.utcnow()
+
+    ev = db.query(models.Evidence).filter(
+        models.Evidence.id == job.evidence_id
+    ).first()
+    if ev:
+        ev.status = "Uploaded"
     db.commit()
+
+    # Emit WebSocket cancellation update immediately
+    try:
+        from backend.main import _notify_case
+        import asyncio
+        _loop = asyncio.new_event_loop()
+        _loop.run_until_complete(
+            _notify_case(
+                job.case_id,
+                "INGESTION_FAILED",
+                {
+                    "evidence_id": job.evidence_id,
+                    "message": "Ingestion stopped by user",
+                    "job_id": job.id,
+                    "status": "Cancelled"
+                },
+            )
+        )
+        _loop.close()
+    except Exception:
+        pass
 
     return {
         "ok": True,
         "job_id": job_id,
-        "message": "Stop signal sent — job will halt after current batch",
+        "message": "Job stopped and evidence reset to Uploaded",
     }
 
 
@@ -488,3 +611,24 @@ def update_job_settings(
         "min_free_ram_mb": job.min_free_ram_mb,
         "note": "Changes take effect on next batch boundary for running jobs",
     }
+
+@router.get("/{case_id}/logs")
+def get_ingestion_logs(
+    case_id: str,
+    lines: int = 200,
+    current_user: models.User = Depends(get_current_user)
+):
+    from backend.dependencies import get_settings
+    import os
+    settings = get_settings()
+    log_file = os.path.join(settings.cases_dir, case_id, "ingestion.log")
+    
+    if not os.path.exists(log_file):
+        return {"logs": "No logs available yet."}
+    
+    try:
+        with open(log_file, "r") as f:
+            all_lines = f.readlines()
+            return {"logs": "".join(all_lines[-lines:])}
+    except Exception as e:
+        return {"logs": f"Error reading logs: {str(e)}"}

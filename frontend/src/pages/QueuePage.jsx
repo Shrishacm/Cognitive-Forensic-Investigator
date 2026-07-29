@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { intervalToDuration } from 'date-fns'
 import {
   Layers, RefreshCw, CheckCircle, XCircle,
-  Clock, Trash2, HardDrive, Cpu,
+  Clock, Trash2, HardDrive, Cpu, FileText
 } from 'lucide-react'
-import { getQueueList, deleteQueueJob, addToQueue } from '../api/client'
+import { getQueueList, deleteQueueJob, stopQueueJob, addToQueue, getIngestionLogs } from '../api/client'
 import PageLayout from '../components/PageLayout'
+import LiveIngestionHardwareMonitor from '../components/LiveIngestionHardwareMonitor'
 import toast from 'react-hot-toast'
-import { formatDistanceToNow, intervalToDuration } from 'date-fns'
 import { fromUtc } from '../utils/time'
+import useWebSocket from '../hooks/useWebSocket'
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -87,8 +89,68 @@ if (!document.getElementById('queue-styles')) {
   document.head.appendChild(style)
 }
 
+function LogsModal({ caseId, onClose }) {
+  const [logs, setLogs] = useState('Loading logs...\n')
+  const logEndRef = useRef(null)
+
+  // Fetch initial backlog, then stream real-time
+  useEffect(() => {
+    if (!caseId) return
+    const fetchLogs = async () => {
+      try {
+        const data = await getIngestionLogs(caseId, 500)
+        if (data.logs) setLogs(data.logs)
+      } catch (e) {
+        setLogs('Failed to fetch logs.')
+      }
+    }
+    fetchLogs()
+  }, [caseId])
+
+  useWebSocket('/ws/global', (data) => {
+    if (data.type === 'INGESTION_LOG' && data.case_id === caseId) {
+      setLogs(prev => prev + data.log)
+    }
+  })
+
+  useEffect(() => {
+    if (logEndRef.current) logEndRef.current.scrollIntoView({ behavior: 'smooth' })
+  }, [logs])
+
+  if (!caseId) return null
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.8)', zIndex: 9999,
+      display: 'flex', justifyContent: 'center', alignItems: 'center'
+    }}>
+      <div style={{
+        background: '#1e293b', padding: 20, borderRadius: 12,
+        width: '80%', height: '80%', display: 'flex', flexDirection: 'column'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15 }}>
+          <h3 style={{ margin: 0, color: 'white' }}>Ingestion Logs</h3>
+          <button onClick={onClose} style={{
+            border: 'none', color: '#94a3b8', cursor: 'pointer',
+            padding: '4px 10px', borderRadius: 4, background: 'rgba(255,255,255,0.05)'
+          }}>Close</button>
+        </div>
+        <div style={{
+          flex: 1, background: '#0f172a', padding: 15, borderRadius: 8,
+          overflowY: 'auto', fontFamily: 'monospace', fontSize: 12, color: '#38bdf8',
+          whiteSpace: 'pre-wrap'
+        }}>
+          {logs}
+          <div ref={logEndRef} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── JobRow ───────────────────────────────────────────────────────────────────
-function JobRow({ job, onRetry, onDelete }) {
+function JobRow({ job, onRetry, onDelete, onStop, onViewLogs }) {
   const cfg = STATUS_CONFIG[job.status] || STATUS_CONFIG.Queued
   const Icon = cfg.icon
 
@@ -177,12 +239,34 @@ function JobRow({ job, onRetry, onDelete }) {
                 transition: 'width 0.5s ease',
               }} />
             </div>
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>{progress}%</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>
+                {progress}%
+                {job.elapsed_seconds != null && job.elapsed_seconds >= 0 && (
+                  <span style={{ marginLeft: 8, color: 'rgba(255,255,255,0.2)' }}>
+                    elapsed: {job.elapsed_seconds > 60 ? `${Math.floor(job.elapsed_seconds/60)}m ` : ''}{job.elapsed_seconds % 60}s
+                  </span>
+                )}
+              </span>
+              {job.estimated_seconds != null && (
+                <span style={{ fontSize: 10, color: '#f59e0b' }}>
+                  ETA: {job.estimated_seconds > 60 ? `${Math.floor(job.estimated_seconds/60)}m ` : ''}{job.estimated_seconds % 60}s
+                </span>
+              )}
+            </div>
           </div>
         ) : (
           <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>
-            {job.status === 'Completed' ? '100%'
-              : job.status === 'Queued' ? `#${job.queue_position ?? '—'} in queue`
+            {job.status === 'Completed' ? (
+              <>
+                100%
+                {job.elapsed_seconds != null && job.elapsed_seconds >= 0 && (
+                  <span style={{ marginLeft: 8, color: 'rgba(255,255,255,0.3)' }}>
+                    (took {job.elapsed_seconds > 60 ? `${Math.floor(job.elapsed_seconds/60)}m ` : ''}{job.elapsed_seconds % 60}s)
+                  </span>
+                )}
+              </>
+            ) : job.status === 'Queued' ? `#${job.queue_position ?? '—'} in queue`
               : '—'}
           </span>
         )}
@@ -214,6 +298,49 @@ function JobRow({ job, onRetry, onDelete }) {
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: 4 }}>
+        <button
+          onClick={() => onViewLogs(job.case_id)}
+          title="View Ingestion Logs"
+          style={{
+            padding: 5,
+            borderRadius: 6,
+            background: 'rgba(56,189,248,0.1)',
+            border: '1px solid rgba(56,189,248,0.2)',
+            color: '#38bdf8',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center'
+          }}
+        >
+          <FileText size={12} />
+        </button>
+        {(job.status === 'Running' || job.status === 'Queued') && (
+          <button
+            onClick={() => onStop(job.id)}
+            title="Stop processing"
+            style={{
+              padding: 5,
+              borderRadius: 6,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'rgba(239,68,68,0.7)',
+              display: 'flex',
+              alignItems: 'center',
+              transition: 'color 0.15s, background 0.15s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = '#ef4444'
+              e.currentTarget.style.background = 'rgba(239,68,68,0.1)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = 'rgba(239,68,68,0.7)'
+              e.currentTarget.style.background = 'none'
+            }}
+          >
+            <XCircle size={14} />
+          </button>
+        )}
         {job.status === 'Failed' && (
           <button
             onClick={() => onRetry(job.evidence_id, job.case_id)}
@@ -296,6 +423,7 @@ export default function QueuePage() {
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [logCaseId, setLogCaseId] = useState(null)
   const pollRef = useRef(null)
 
   const load = async () => {
@@ -332,6 +460,16 @@ export default function QueuePage() {
       toast.success('Job removed from history')
     } catch (e) {
       toast.error(e.response?.data?.detail || 'Delete failed')
+    }
+  }
+
+  const handleStop = async (jobId) => {
+    try {
+      await stopQueueJob(jobId)
+      toast.success('Stopping job...')
+      load()
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Failed to stop job')
     }
   }
 
@@ -383,8 +521,8 @@ export default function QueuePage() {
         </button>
       }
     >
-
-      {/* System info row */}
+      {/* Live 1s Refresh Hardware Telemetry Monitor */}
+      <LiveIngestionHardwareMonitor />
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -501,6 +639,8 @@ export default function QueuePage() {
               job={job}
               onRetry={handleRetry}
               onDelete={handleDelete}
+              onStop={handleStop}
+              onViewLogs={setLogCaseId}
             />
           ))
         )}
@@ -532,6 +672,8 @@ export default function QueuePage() {
           </span>
         </div>
       )}
+      
+      <LogsModal caseId={logCaseId} onClose={() => setLogCaseId(null)} />
     </PageLayout>
   )
 }

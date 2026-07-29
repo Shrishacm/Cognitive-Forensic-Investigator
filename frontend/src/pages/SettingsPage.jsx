@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Lock, Eye, EyeOff, CheckCircle, Shield, QrCode, User, Settings2, Link as LinkIcon } from 'lucide-react'
-import { changePassword, getPreferences, updatePreferences, setup2FA, verify2FA, disable2FA } from '../api/client'
+import { Lock, Eye, EyeOff, CheckCircle, Shield, QrCode, User, Settings2, Link as LinkIcon, Cpu, Zap } from 'lucide-react'
+import { changePassword, getPreferences, updatePreferences, setup2FA, verify2FA, disable2FA, getHardwarePreference, updateHardwarePreference } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
 import PageLayout from '../components/PageLayout'
@@ -152,6 +152,16 @@ function PreferencesTab() {
   )
 }
 
+import LiveIngestionHardwareMonitor from '../components/LiveIngestionHardwareMonitor'
+
+function HardwareTab() {
+  return (
+    <div className="animate-fade-in" style={{ maxWidth: 720 }}>
+      <LiveIngestionHardwareMonitor />
+    </div>
+  )
+}
+
 function IntegrationsTab() {
   const [keys, setKeys] = useState({ openai: '', virustotal: '' })
   const [loading, setLoading] = useState(false)
@@ -243,12 +253,10 @@ function IntegrationsTab() {
 }
 
 function SecurityTab({ user, navigate }) {
-  // Password state
   const [form, setForm] = useState({ current_password: '', new_password: '', confirm: '' })
   const [show, setShow] = useState({ current: false, new: false, confirm: false })
   const [pwLoading, setPwLoading] = useState(false)
 
-  // 2FA state
   const [step, setStep] = useState('start')
   const [qrData, setQrData] = useState(null)
   const [secret, setSecret] = useState('')
@@ -437,12 +445,13 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'account', label: 'Account', icon: User },
     { id: 'preferences', label: 'Preferences', icon: Settings2 },
+    { id: 'hardware', label: 'Hardware & Compute', icon: Cpu },
     { id: 'integrations', label: 'API Integrations', icon: LinkIcon },
     { id: 'security', label: 'Security', icon: Shield },
   ]
 
   return (
-    <PageLayout title="Settings" subtitle="Manage your account and preferences">
+    <PageLayout title="Settings" subtitle="Manage your account, hardware compute mode, and preferences">
       <div style={{ display: 'flex', gap: 40, alignItems: 'flex-start' }}>
         
         {/* Sidebar Navigation */}
@@ -482,6 +491,7 @@ export default function SettingsPage() {
         <div style={{ flex: 1, minWidth: 0, paddingBottom: 60 }}>
           {tab === 'account' && <AccountTab user={user} />}
           {tab === 'preferences' && <PreferencesTab />}
+          {tab === 'hardware' && <HardwareTab />}
           {tab === 'integrations' && <IntegrationsTab />}
           {tab === 'security' && <SecurityTab user={user} navigate={navigate} />}
         </div>
