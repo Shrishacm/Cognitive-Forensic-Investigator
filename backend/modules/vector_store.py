@@ -14,6 +14,8 @@ def get_ingestion_device() -> str:
         return "cpu"
     if torch.cuda.is_available():
         return "cuda"
+    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        return "mps"
     return "cpu"
 
 device = get_ingestion_device()
