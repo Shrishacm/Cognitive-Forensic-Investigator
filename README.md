@@ -227,16 +227,16 @@ Investigator Query
 Ensure the following are installed on your system before proceeding.
 
 | Requirement | Min Version | macOS | Linux (Ubuntu/Debian) |
-|---|---|---|---|
-| Python | 3.10+ | `brew install python3` | `sudo apt install python3 python3-pip python3-venv` |
-| Node.js | 18+ | `brew install node` | `sudo apt install nodejs npm` |
-| npm | 9+ | bundled with Node.js | bundled with Node.js |
-| Ollama | latest | [ollama.com](https://ollama.com) | `curl -fsSL https://ollama.com/install.sh \| sh` |
-| Tesseract OCR | 5.0+ | `brew install tesseract` | `sudo apt install tesseract-ocr` |
-| ffmpeg | 6.0+ | `brew install ffmpeg` | `sudo apt install ffmpeg` |
-| libewf (disk images) | latest | `brew install libewf` | `sudo apt install libewf-dev ewf-tools` |
-| The Sleuth Kit | 4.12+ | `brew install sleuthkit` | `sudo apt install sleuthkit` |
-| Build tools | — | Xcode CLI tools | `sudo apt install build-essential libssl-dev libffi-dev python3-dev` |
+|---|---|---|---|---|
+| Python | 3.10+ | `brew install python3` | `sudo apt install python3 python3-pip python3-venv` | `winget install Python.Python.3.11` |
+| Node.js | 18+ | `brew install node` | `sudo apt install nodejs npm` | `winget install OpenJS.NodeJS` |
+| npm | 9+ | bundled with Node.js | bundled with Node.js | bundled with Node.js |
+| Ollama | latest | [ollama.com](https://ollama.com) | `curl -fsSL https://ollama.com/install.sh \| sh` | [ollama.com](https://ollama.com) |
+| Tesseract OCR | 5.0+ | `brew install tesseract` | `sudo apt install tesseract-ocr` | [UB-Mannheim/tesseract](https://github.com/UB-Mannheim/tesseract/wiki) |
+| ffmpeg | 6.0+ | `brew install ffmpeg` | `sudo apt install ffmpeg` | `winget install ffmpeg` |
+| libewf (disk images) | latest | `brew install libewf` | `sudo apt install libewf-dev ewf-tools` | *Not native on Windows* |
+| The Sleuth Kit | 4.12+ | `brew install sleuthkit` | `sudo apt install sleuthkit` | *Not native on Windows* |
+| Build tools | — | Xcode CLI tools | `sudo apt install build-essential libssl-dev libffi-dev python3-dev` | Build Tools for Visual Studio |
 
 > **Note:** pyewf and pytsk3 (disk image parsing) are optional. The system degrades gracefully and supports all other file types without them.
 
@@ -269,7 +269,10 @@ OLLAMA_MODEL=phi4-mini
 
 ## Quick Setup
 
-The fastest way to get started on a fresh machine. `setup.sh` **auto-detects your operating system** and runs the correct commands for both macOS and Linux automatically:
+The fastest way to get started on a fresh machine. 
+
+For **Linux & macOS**:
+`setup.sh` auto-detects your operating system and runs the correct commands automatically.
 
 ```bash
 # 1. Clone or extract the project
@@ -278,8 +281,15 @@ cd cfi_project/
 # 2. Run the automated setup script
 ./setup.sh
 ```
-
 > **Linux users:** If you get a permission error, run `chmod +x setup.sh` first, then `./setup.sh`.
+
+For **Windows**:
+Double-click `setup_windows.bat` or run it from the Command Prompt:
+
+```cmd
+cd cfi_project
+setup_windows.bat
+```
 
 `setup.sh` will:
 - Check for Python 3 and Node.js
