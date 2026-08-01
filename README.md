@@ -361,7 +361,20 @@ ollama pull llama3.2:3b
 
 ## Running the Application
 
-You need **three terminals** running simultaneously. The commands are identical on macOS and Linux.
+The easiest way to run the application is to use the provided startup scripts, which will automatically launch both the backend and frontend in the background.
+
+**For Linux & macOS:**
+```bash
+./start.sh
+```
+
+**For Windows:**
+Double-click `start_windows.bat` or run:
+```cmd
+start_windows.bat
+```
+
+Alternatively, you can run the services manually in separate terminals:
 
 ### Terminal 1 — Ollama (LLM Runtime)
 
