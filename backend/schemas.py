@@ -37,6 +37,7 @@ class CaseResponse(BaseModel):
     tags: list[str]
     evidence_count: int = 0
     query_count: int = 0
+    storage_bytes: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 

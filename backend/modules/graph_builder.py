@@ -15,10 +15,12 @@ except Exception:
     pass
 
 try:
-    nlp = spacy.load("en_core_web_lg")
+    # en_core_web_sm = 43MB, fast NER, sufficient accuracy for forensics
+    # en_core_web_lg = 741MB, slow — overkill for entity extraction
+    nlp = spacy.load("en_core_web_sm")
 except Exception:
     try:
-        nlp = spacy.load("en_core_web_sm")
+        nlp = spacy.load("en_core_web_lg")
     except Exception:
         nlp = spacy.blank("en")
 
@@ -161,11 +163,24 @@ def build_graph(chunks: list[str],
         if name in nlp.pipe_names:
             disable_components.append(name)
 
-    PIPE_BATCH = 32
+    # Hard cap: NER is repetitive — sample intelligently
+    # For large files, sample every Nth chunk to stay under 500 chunks.
+    MAX_NER_CHUNKS = 500
+    if len(chunks) > MAX_NER_CHUNKS:
+        # Evenly-spaced sample so we cover the whole file
+        step = max(1, len(chunks) // MAX_NER_CHUNKS)
+        ner_chunks = chunks[::step][:MAX_NER_CHUNKS]
+        logger_prefix = f"Large file: NER sampling {len(ner_chunks)}/{len(chunks)} chunks"
+        print(f"[GRAPH_BUILDER] {logger_prefix}")
+    else:
+        ner_chunks = chunks
+
+    # Larger SpaCy batch = fewer Python round-trips = faster
+    PIPE_BATCH = 256
     ip_pattern = re.compile(r'\b(?:\d{1,3}\.){3}\d{1,3}\b')
 
     # Use nlp.pipe() for batched processing instead of per-chunk nlp() calls
-    docs = nlp.pipe(chunks, batch_size=PIPE_BATCH, disable=disable_components)
+    docs = nlp.pipe(ner_chunks, batch_size=PIPE_BATCH, disable=disable_components)
 
     for i, doc in enumerate(docs):
         # Governor check on every chunk to ensure rapid cancellation
@@ -181,7 +196,7 @@ def build_graph(chunks: list[str],
             elif ent.label_ in ("ORG", "NORP"):
                 organizations.append(ent.text.strip())
 
-        ips = ip_pattern.findall(chunks[i])
+        ips = ip_pattern.findall(ner_chunks[i])
 
         entities = {
             "persons": _resolve_entities(

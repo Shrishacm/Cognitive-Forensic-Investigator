@@ -471,6 +471,10 @@ class IngestionJob(Base):
     # 50 = sleep 1s between batches
     # 25 = sleep 3s between batches
 
+    analysis_mode = Column(
+        String(20), default="normal")
+    # fastest | normal | accurate
+
     # Timestamps
     queued_at = Column(
         DateTime, default=datetime.utcnow)

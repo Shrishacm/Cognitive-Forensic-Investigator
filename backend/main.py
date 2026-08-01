@@ -22,6 +22,31 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     # Startup
     init_db()
+    
+    # Abort any jobs that were pending/running when the server shut down
+    from backend.database import SessionLocal
+    db = SessionLocal()
+    try:
+        stale_jobs = db.query(models.IngestionJob).filter(
+            models.IngestionJob.status.in_(["Queued", "Running", "Paused"])
+        ).all()
+        if stale_jobs:
+            print(f"[STARTUP] Aborting {len(stale_jobs)} stale ingestion jobs")
+            for j in stale_jobs:
+                j.status = "Cancelled"
+                j.error_message = "Aborted due to software restart"
+                j.current_step = "Cancelled on startup"
+                
+                ev = db.query(models.Evidence).filter(models.Evidence.id == j.evidence_id).first()
+                if ev and ev.status in ["Queued", "Processing"]:
+                    ev.status = "Failed"
+                    ev.error_message = "Aborted due to software restart"
+            db.commit()
+    except Exception as e:
+        print(f"[STARTUP] Error cleaning up stale jobs: {e}")
+    finally:
+        db.close()
+
     from backend.modules.job_worker import start_worker
     start_worker()
     print(f"Database initialized")

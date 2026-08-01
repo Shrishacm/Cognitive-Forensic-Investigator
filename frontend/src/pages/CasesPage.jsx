@@ -9,6 +9,14 @@ import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
 import { fromUtc } from '../utils/time'
 
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
 export default function CasesPage({ setActiveCaseId }) {
   const navigate = useNavigate()
   const [cases, setCases] = useState([])
@@ -250,7 +258,7 @@ export default function CasesPage({ setActiveCaseId }) {
                   <Badge label={c.status} />
                   <Badge label={c.priority} />
                   <span className="text-xs text-ink-2">
-                    {c.evidence_count} evidence · {c.query_count} queries
+                    {c.evidence_count} evidence · {c.query_count} queries · {formatBytes(c.storage_bytes || 0)}
                   </span>
                   <span className="text-xs text-ink-2 ml-auto">
                     {formatDistanceToNow(fromUtc(c.created_at), { addSuffix: true })}

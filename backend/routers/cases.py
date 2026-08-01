@@ -45,6 +45,31 @@ def _parse_case(db_case: models.Case, db: Session) -> schemas.CaseResponse:
         .count()
     )
 
+    storage_bytes = 0
+    try:
+        from backend.dependencies import get_settings
+        settings = get_settings()
+        
+        # Calculate size of case directory (evidence, temp files, etc)
+        case_dir = settings.cases_dir / db_case.id
+        if case_dir.exists():
+            for root, dirs, files in os.walk(case_dir):
+                for f in files:
+                    fp = os.path.join(root, f)
+                    if not os.path.islink(fp):
+                        storage_bytes += os.path.getsize(fp)
+                        
+        # Calculate size of vector DB collection for this case
+        qdrant_col = settings.qdrant_dir / "collections" / f"case_{db_case.id[:8]}"
+        if qdrant_col.exists():
+            for root, dirs, files in os.walk(qdrant_col):
+                for f in files:
+                    fp = os.path.join(root, f)
+                    if not os.path.islink(fp):
+                        storage_bytes += os.path.getsize(fp)
+    except Exception:
+        pass
+
     return schemas.CaseResponse(
         id=db_case.id,
         case_name=db_case.case_name,
@@ -58,6 +83,7 @@ def _parse_case(db_case: models.Case, db: Session) -> schemas.CaseResponse:
         tags=tags,
         evidence_count=evidence_count,
         query_count=query_count,
+        storage_bytes=storage_bytes,
     )
 
 

@@ -170,12 +170,12 @@ def run_ingestion_with_progress(
 
     def _progress(percent: int, step: str):
         eta_seconds = None
-        elapsed = 0
-        if 0 < percent < 100:
-            elapsed = time.time() - start_time
-            eta_seconds = int((elapsed / percent) * (100 - percent))
+        elapsed = int(time.time() - start_time)
+        if 0 < percent <= 100:
+            if percent < 100:
+                eta_seconds = int((elapsed / percent) * (100 - percent))
             
-        _update_job_progress(job_id, percent, step, eta_seconds, int(elapsed))
+        _update_job_progress(job_id, percent, step, eta_seconds, elapsed)
             
         if progress_callback and job_id and case_id:
             try:
@@ -204,6 +204,12 @@ def run_ingestion_with_progress(
             filename.lower())[1]
         is_disk_image = ext in FORENSIC_EXTENSIONS
 
+        # Fetch analysis_mode from the job record
+        job_record = db.query(models.IngestionJob).filter(
+            models.IngestionJob.id == job_id
+        ).first() if job_id else None
+        analysis_mode = (job_record.analysis_mode or "normal") if job_record else "normal"
+
         if is_disk_image:
             _run_forensic_with_progress(
                 evidence, case_id,
@@ -218,7 +224,8 @@ def run_ingestion_with_progress(
                 file_path, filename,
                 job_id, governor,
                 qdrant_path, db,
-                progress_callback=_progress)
+                progress_callback=_progress,
+                analysis_mode=analysis_mode)
 
     except (Exception, BaseException) as e:
         print(f"[INGESTION] FAILED: {e}")
@@ -278,13 +285,26 @@ def _run_document_with_progress(
         evidence, case_id, file_path,
         filename, job_id, governor,
         qdrant_path, db,
-        progress_callback=None):
+        progress_callback=None,
+        analysis_mode="normal"):
 
     """
     Ingestion pipeline for all non-disk-image
     files: PDF, TXT, Office docs, email, audio,
     video, and images.
+
+    analysis_mode controls the speed/accuracy tradeoff:
+      fastest  — big chunks, minimal NER, skip watchlist
+      normal   — balanced (default)
+      accurate — small chunks, full NER on all chunks
     """
+    # ── Mode-specific pipeline parameters ───────────────────────────────────
+    MODE_PARAMS = {
+        "fastest":  {"chunk_size": 3500,  "overlap": 150, "ner_cap": 50,   "embed_batch": 128, "skip_watchlist": True},
+        "normal":   {"chunk_size": 1500,  "overlap": 150, "ner_cap": 200,  "embed_batch": 64,  "skip_watchlist": False},
+        "accurate": {"chunk_size": 800,   "overlap": 100, "ner_cap": None, "embed_batch": 32,  "skip_watchlist": False},
+    }
+    params = MODE_PARAMS.get(analysis_mode, MODE_PARAMS["normal"])
     import tempfile
     import shutil
     db = SessionLocal()
@@ -356,43 +376,41 @@ def _run_document_with_progress(
             db.commit()
             return
 
-        _progress(25, 'Step 2/5: Chunking text')
+        mode_label = analysis_mode.upper()
+        _progress(25, f'Step 2/5: Chunking text [{mode_label} mode]')
         governor.check_and_throttle()
-        chunks = chunk_text(text)
-        
-        _progress(40, f"Step 3-4/5: Parallel Embedding & Graph Building ({len(chunks)} chunks)")
-        logger.info(f"Generated {len(chunks)} text chunks. Starting parallel embedding and graph building.")
+        chunks = chunk_text(text,
+                            chunk_size=params["chunk_size"],
+                            overlap=params["overlap"])
+
+        _progress(40, f"Step 3-4/5: Parallel Embedding & Graph Building ({len(chunks)} chunks, {mode_label} mode)")
+        logger.info(f"[{mode_label}] {len(chunks)} chunks. embed_batch={params['embed_batch']}, ner_cap={params['ner_cap']}")
         
         def run_embeddings():
-            count = 0
-            i = 0
-            while i < len(chunks):
-                BATCH = governor.get_optimal_batch_size(base_batch=500) if governor else 500
-                batch = chunks[i:i+BATCH]
-                logger.debug(f"VectorStore: Sending batch {i//BATCH + 1} ({len(batch)} chunks) to embedder")
-                count += store_chunks(
-                    chunks=batch,
-                    source_filename=filename,
-                    evidence_id=evidence.id,
-                    case_id=case_id,
-                    qdrant_path=qdrant_path
-                )
-                i += len(batch)
-                progress = 40 + int((i / len(chunks)) * 30)
-                _progress(progress, f"Step 3/5: Embedding ({i}/{len(chunks)} chunks)")
-                logger.info(f"Embedded batch. Total chunks stored: {count}/{len(chunks)}")
-                if governor:
-                    governor.check_and_throttle()
-            logger.info("Finished embedding all chunks.")
+            logger.debug(f"VectorStore: Embedding {len(chunks)} chunks, batch_size={params['embed_batch']}")
+            count = store_chunks(
+                chunks=chunks,
+                source_filename=filename,
+                evidence_id=evidence.id,
+                case_id=case_id,
+                qdrant_path=qdrant_path,
+                batch_size=params["embed_batch"]
+            )
+            _progress(70, f"Step 3/5: Embedding done ({count} chunks stored)")
+            logger.info(f"Finished embedding all {count} chunks.")
             return count
 
         def run_graph():
             logger.info("GraphBuilder: Starting entity extraction via SpaCy.")
             governor.check_and_throttle()
-            # Subsample for NER on very large files — entities are repetitive
-            ner_chunks = chunks if len(chunks) <= 10000 else chunks[::3]
-            if len(ner_chunks) != len(chunks):
-                logger.info(f"Large file: subsampling {len(ner_chunks)}/{len(chunks)} chunks for NER")
+            # Apply NER cap from analysis_mode
+            ner_cap = params["ner_cap"]
+            if ner_cap and len(chunks) > ner_cap:
+                step = max(1, len(chunks) // ner_cap)
+                ner_chunks = chunks[::step][:ner_cap]
+                logger.info(f"NER cap: sampling {len(ner_chunks)}/{len(chunks)} chunks ({analysis_mode} mode)")
+            else:
+                ner_chunks = chunks
             res = build_graph(
                 chunks=ner_chunks,
                 source_filename=filename,
@@ -431,34 +449,35 @@ def _run_document_with_progress(
         total_entities = sum(
             entity_counts.values())
 
-        # ── Watchlist scanning ──────────────
-        try:
-            _wl_db = SessionLocal()
-            wl_keywords = _wl_db.query(
-                models.WatchlistKeyword
-            ).filter(
-                models.WatchlistKeyword.case_id == case_id,
-                models.WatchlistKeyword.is_active == True
-            ).all()
+        # ── Watchlist scanning (skipped in fastest mode) ────────────────────
+        if not params["skip_watchlist"]:
+            try:
+                _wl_db = SessionLocal()
+                wl_keywords = _wl_db.query(
+                    models.WatchlistKeyword
+                ).filter(
+                    models.WatchlistKeyword.case_id == case_id,
+                    models.WatchlistKeyword.is_active == True
+                ).all()
 
-            if wl_keywords:
-                matched_any = False
-                for chunk in chunks:
-                    chunk_lower = chunk.lower()
-                    for kw in wl_keywords:
-                        if kw.keyword.lower() in chunk_lower:
-                            kw.hit_count += 1
-                            matched_any = True
-                if matched_any:
-                    _wl_db.commit()
-                    print(
-                        f"[INGESTION] Watchlist: "
-                        f"scanned {len(wl_keywords)} "
-                        f"keywords"
-                    )
-            _wl_db.close()
-        except Exception as wl_err:
-            print(f"[INGESTION] Watchlist scan error: {wl_err}")
+                if wl_keywords:
+                    matched_any = False
+                    for chunk in chunks:
+                        chunk_lower = chunk.lower()
+                        for kw in wl_keywords:
+                            if kw.keyword.lower() in chunk_lower:
+                                kw.hit_count += 1
+                                matched_any = True
+                    if matched_any:
+                        _wl_db.commit()
+                        print(
+                            f"[INGESTION] Watchlist: "
+                            f"scanned {len(wl_keywords)} "
+                            f"keywords"
+                        )
+                _wl_db.close()
+            except Exception as wl_err:
+                print(f"[INGESTION] Watchlist scan error: {wl_err}")
 
         # ── Credential scanning ──────────────────────────────────────────
         try:
@@ -515,6 +534,8 @@ def _run_document_with_progress(
                     j.status = "Completed"
                     j.progress_percent = 100
                     j.completed_at = datetime.utcnow()
+                    if j.started_at:
+                        j.elapsed_seconds = int((j.completed_at - j.started_at).total_seconds())
                     j.current_step = f"Complete — {chunk_count} chunks, {total_entities} entities"
                     db2.commit()
             finally:
@@ -914,6 +935,8 @@ def _run_forensic_with_progress(evidence, case_id, file_path,
                         j.status = "Completed"
                         j.progress_percent = 100
                         j.completed_at = datetime.utcnow()
+                        if j.started_at:
+                            j.elapsed_seconds = int((j.completed_at - j.started_at).total_seconds())
                         j.current_step = f"Complete — {artifact_count} artifacts"
                         db2.commit()
                 finally:

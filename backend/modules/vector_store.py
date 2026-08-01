@@ -53,15 +53,48 @@ def get_single_embedding(text: str) -> list[float]:
     return model.encode(text).tolist()
 
 
-def get_batch_embeddings(texts: list[str]) -> list[list[float]]:
+# CPU-only model instance for parallel auto mode
+_cpu_model = None
+
+def _get_cpu_model():
+    """Lazy-init a CPU-bound SentenceTransformer for parallel auto mode."""
+    global _cpu_model
+    if _cpu_model is None:
+        _cpu_model = SentenceTransformer(
+            "nomic-ai/nomic-embed-text-v1",
+            trust_remote_code=True,
+            device="cpu"
+        )
+    return _cpu_model
+
+
+def get_batch_embeddings(texts: list[str], batch_size: int = 128) -> list[list[float]]:
     """
     Generates 768-d vector embeddings for a batch of texts.
-    Uses GPU natively via SentenceTransformers tensor batching.
+
+    Hardware mode behaviour:
+      auto  — splits work between GPU and CPU in parallel threads
+      cuda  — GPU only
+      cpu   — CPU only
+    batch_size is passed through from the analysis_mode params.
     """
     if not texts:
         return []
-        
-    return model.encode(texts, batch_size=32).tolist()
+
+    mode = os.getenv("HARDWARE_MODE", "auto").lower()
+
+    if mode == "auto" and device == "cuda":
+        # ── Auto mode: If GPU is present, use GPU for everything. CPU offloading 
+        # bottlenecks the batch because CPU encodes 20x slower than GPU, and doubles RAM.
+        pass
+
+    # ── Single-device path (cuda-only or cpu-only) ──
+    return model.encode(
+        texts,
+        batch_size=batch_size,
+        show_progress_bar=False,
+        convert_to_numpy=True
+    ).tolist()
 
 
 
@@ -103,28 +136,35 @@ def ensure_collection(client: QdrantClient,
     _ensured_collections.add(collection_name)
 
 
+# Qdrant upsert max points per batch — stay under 10MB payload limit
+_QDRANT_UPSERT_BATCH = 512
+
+
 def store_chunks(chunks: list[str],
                  source_filename: str,
                  evidence_id: str,
                  case_id: str,
-                 qdrant_path: str) -> int:
+                 qdrant_path: str,
+                 batch_size: int = 128) -> int:
     """
     Embeds and stores chunks in the case collection.
+    Embeddings are computed in one GPU batch (or parallel CPU+GPU in auto mode).
+    Qdrant upserts are batched separately to avoid payload size limits.
     Returns number of chunks stored.
     """
     if not chunks:
         return 0
-        
+
     try:
         client = get_client(qdrant_path)
         collection = get_collection_name(case_id)
         ensure_collection(client, collection)
 
-        points = []
-        embeddings = get_batch_embeddings(chunks)
-        
-        for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-            points.append(PointStruct(
+        # Compute ALL embeddings — maximises GPU (or GPU+CPU parallel) utilisation
+        embeddings = get_batch_embeddings(chunks, batch_size=batch_size)
+
+        points = [
+            PointStruct(
                 id=str(uuid.uuid4()),
                 vector=embedding,
                 payload={
@@ -134,12 +174,17 @@ def store_chunks(chunks: list[str],
                     "case_id": case_id,
                     "chunk_index": i
                 }
-            ))
+            )
+            for i, (chunk, embedding) in enumerate(zip(chunks, embeddings))
+        ]
 
-        client.upsert(
-            collection_name=collection,
-            points=points
-        )
+        # Upsert in batches to stay under Qdrant's request size limit
+        for batch_start in range(0, len(points), _QDRANT_UPSERT_BATCH):
+            client.upsert(
+                collection_name=collection,
+                points=points[batch_start:batch_start + _QDRANT_UPSERT_BATCH]
+            )
+
         return len(points)
 
     except Exception as e:
@@ -150,7 +195,7 @@ def store_chunks(chunks: list[str],
 def search_chunks(query: str,
                   case_id: str,
                   qdrant_path: str,
-                  top_k: int = 7,
+                  top_k: int = 5,
                   evidence_id: str = None
                   ) -> list[dict]:
     """

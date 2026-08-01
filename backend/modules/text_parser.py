@@ -28,10 +28,12 @@ def extract_text(file_path: str) -> str:
 
 
 def chunk_text(text: str,
-               chunk_size: int = 10000,
-               overlap: int = 500) -> list[str]:
+               chunk_size: int = 2000,
+               overlap: int = 200) -> list[str]:
     """
     Splits text into overlapping chunks.
+    Smaller chunk_size = fewer tokens per embedding = faster throughput.
+    2000 chars ≈ 400 tokens, well within nomic-embed-text's 8192 token limit.
     """
     if not text:
         return []

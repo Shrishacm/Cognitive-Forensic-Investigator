@@ -150,12 +150,48 @@ function LogsModal({ caseId, onClose }) {
 }
 
 // ─── JobRow ───────────────────────────────────────────────────────────────────
+const MODE_BADGE = {
+  fastest:  { emoji: '⚡', label: 'Fastest', color: '#f59e0b' },
+  normal:   { emoji: '⚖️', label: 'Normal',  color: '#6366f1' },
+  accurate: { emoji: '🎯', label: 'Accurate', color: '#10b981' },
+}
+
 function JobRow({ job, onRetry, onDelete, onStop, onViewLogs }) {
   const cfg = STATUS_CONFIG[job.status] || STATUS_CONFIG.Queued
   const Icon = cfg.icon
 
   const name = job.original_filename || job.filename || 'Unknown file'
   const progress = job.progress_percent ?? job.progress
+  const modeBadge = MODE_BADGE[job.analysis_mode] || MODE_BADGE.normal
+
+  // ── Client-side live elapsed timer ──
+  const [liveElapsed, setLiveElapsed] = React.useState(null)
+
+  React.useEffect(() => {
+    if (job.status !== 'Running' || !job.started_at) {
+      setLiveElapsed(null)
+      return
+    }
+    const startMs = new Date(job.started_at + (job.started_at.endsWith('Z') ? '' : 'Z')).getTime()
+    const tick = () => setLiveElapsed(Math.floor((Date.now() - startMs) / 1000))
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [job.status, job.started_at])
+
+  // ── Client-side ETA from actual progress ──
+  const liveEta = React.useMemo(() => {
+    if (job.status !== 'Running' || !liveElapsed || !progress || progress <= 0) return null
+    return Math.round((liveElapsed / progress) * (100 - progress))
+  }, [liveElapsed, progress, job.status])
+
+  const displayElapsed = liveElapsed ?? job.elapsed_seconds
+  const displayEta = liveEta ?? job.estimated_seconds
+
+  const fmtSecs = (s) => s == null ? '—' : s > 3600
+    ? `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`
+    : s > 60 ? `${Math.floor(s/60)}m ${s%60}s` : `${s}s`
+
 
   return (
     <div
@@ -182,6 +218,14 @@ function JobRow({ job, onRetry, onDelete, onStop, onViewLogs }) {
             whiteSpace: 'nowrap',
           }}>
             {name}
+          </span>
+          <span style={{
+            flexShrink: 0, fontSize: 9, fontWeight: 700, padding: '2px 6px',
+            borderRadius: 5, background: `${modeBadge.color}18`,
+            border: `1px solid ${modeBadge.color}40`, color: modeBadge.color,
+            letterSpacing: '0.04em'
+          }} title={`Analysis Mode: ${modeBadge.label}`}>
+            {modeBadge.emoji} {modeBadge.label}
           </span>
         </div>
         <div style={{ display: 'flex', gap: 10, paddingLeft: 18 }}>
@@ -220,7 +264,7 @@ function JobRow({ job, onRetry, onDelete, onStop, onViewLogs }) {
         </span>
       </div>
 
-      {/* Progress bar */}
+      {/* Progress bar + client-side live ETA */}
       <div>
         {job.status === 'Running' && progress != null ? (
           <div>
@@ -242,15 +286,15 @@ function JobRow({ job, onRetry, onDelete, onStop, onViewLogs }) {
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>
                 {progress}%
-                {job.elapsed_seconds != null && job.elapsed_seconds >= 0 && (
+                {displayElapsed != null && (
                   <span style={{ marginLeft: 8, color: 'rgba(255,255,255,0.2)' }}>
-                    elapsed: {job.elapsed_seconds > 60 ? `${Math.floor(job.elapsed_seconds/60)}m ` : ''}{job.elapsed_seconds % 60}s
+                    elapsed: {fmtSecs(displayElapsed)}
                   </span>
                 )}
               </span>
-              {job.estimated_seconds != null && (
+              {displayEta != null && (
                 <span style={{ fontSize: 10, color: '#f59e0b' }}>
-                  ETA: {job.estimated_seconds > 60 ? `${Math.floor(job.estimated_seconds/60)}m ` : ''}{job.estimated_seconds % 60}s
+                  ETA: {fmtSecs(displayEta)}
                 </span>
               )}
             </div>
@@ -262,7 +306,7 @@ function JobRow({ job, onRetry, onDelete, onStop, onViewLogs }) {
                 100%
                 {job.elapsed_seconds != null && job.elapsed_seconds >= 0 && (
                   <span style={{ marginLeft: 8, color: 'rgba(255,255,255,0.3)' }}>
-                    (took {job.elapsed_seconds > 60 ? `${Math.floor(job.elapsed_seconds/60)}m ` : ''}{job.elapsed_seconds % 60}s)
+                    (took {fmtSecs(job.elapsed_seconds)})
                   </span>
                 )}
               </>

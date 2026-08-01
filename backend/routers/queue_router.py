@@ -28,6 +28,7 @@ class QueueJobRequest(BaseModel):
     case_id: str
     min_free_ram_mb: int = 2048
     cpu_throttle_percent: int = 70
+    analysis_mode: str = "normal"  # fastest | normal | accurate
 
 class BulkQueueRequest(BaseModel):
     jobs: list[QueueJobRequest]
@@ -185,6 +186,7 @@ def add_to_queue(
         queue_position=max_pos,
         min_free_ram_mb=body.min_free_ram_mb,
         cpu_throttle_percent=body.cpu_throttle_percent,
+        analysis_mode=body.analysis_mode,
         estimated_seconds=estimate,
         created_by=current_user.username
     )
@@ -330,6 +332,7 @@ def list_all_jobs(
             "created_by": j.created_by,
             "cpu_throttle_percent": j.cpu_throttle_percent,
             "min_free_ram_mb": j.min_free_ram_mb,
+            "analysis_mode": j.analysis_mode or "normal",
             # Evidence display fields
             "filename": ev.filename if ev else None,
             "original_filename": ev.filename if ev else None,
