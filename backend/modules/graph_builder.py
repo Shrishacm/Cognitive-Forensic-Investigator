@@ -8,9 +8,8 @@ import os
 try:
     import torch
     mode = os.getenv("HARDWARE_MODE", "auto").lower()
-    if mode != "cpu" and torch.cuda.is_available():
-        spacy.require_gpu()
-        print("[GRAPH_BUILDER] spaCy enabled GPU acceleration")
+    # spaCy GPU disabled due to CuPy compilation errors with CUDA 13.
+    # CPU is fast enough for single-query entity extraction.
 except Exception:
     pass
 

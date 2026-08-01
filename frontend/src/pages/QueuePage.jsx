@@ -483,7 +483,8 @@ export default function QueuePage() {
 
   useEffect(() => {
     load()
-    pollRef.current = setInterval(load, 3000)
+    // 8s poll (was 3s) — WebSocket handles live job events; this is a safety fallback
+    pollRef.current = setInterval(load, 8000)
     return () => clearInterval(pollRef.current)
   }, [])
 

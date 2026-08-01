@@ -773,8 +773,15 @@ export default function EvidencePage() {
   }, []))
 
   const loadAll = async () => {
-    await Promise.all([loadQueue(), loadHistory(), loadSysInfo()])
+    await Promise.all([loadQueue(), loadHistory()])
   }
+
+  // System info changes rarely — poll every 60s separately to save CPU
+  useEffect(() => {
+    loadSysInfo()
+    const sysInfoPoll = setInterval(loadSysInfo, 60000)
+    return () => clearInterval(sysInfoPoll)
+  }, [])
 
   const loadQueue = async () => {
     try {
@@ -861,7 +868,8 @@ export default function EvidencePage() {
     : 'text-success'
 
 
-  useEffect(() => { loadAll(); const qPoll = setInterval(loadAll, 10000); return () => clearInterval(qPoll); }, [caseId])
+  // Poll queue + history every 20s (was 10s) — sysInfo has its own 60s interval
+  useEffect(() => { loadAll(); const qPoll = setInterval(loadAll, 20000); return () => clearInterval(qPoll); }, [caseId])
   return (
     <PageLayout
       title="Evidence & Ingestion"

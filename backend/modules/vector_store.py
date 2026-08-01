@@ -50,7 +50,16 @@ def get_single_embedding(text: str) -> list[float]:
         except Exception:
             pass
 
-    return model.encode(text).tolist()
+    # GPU encode with OOM fallback to CPU
+    try:
+        return model.encode(text).tolist()
+    except RuntimeError as e:
+        if "out of memory" in str(e).lower():
+            import torch
+            torch.cuda.empty_cache()
+            cpu_m = _get_cpu_model()
+            return cpu_m.encode(text).tolist()
+        raise
 
 
 # CPU-only model instance for parallel auto mode

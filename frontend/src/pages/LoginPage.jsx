@@ -75,7 +75,10 @@
         navigate('/')
       } catch (e) {
         toast.error(
-          e.response?.data?.detail || 'Authentication failed'
+          e.response?.data?.error || 
+          e.response?.data?.detail || 
+          e.message ||
+          'Authentication failed'
         )
       } finally {
         setLoading(false)

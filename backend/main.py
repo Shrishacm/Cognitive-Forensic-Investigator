@@ -1,3 +1,15 @@
+import warnings, os
+# ── Suppress noisy but harmless CUDA / HuggingFace deprecation warnings ──────
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", message=".*unauthenticated.*HF Hub.*")
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
+os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+# Silence CUDA FP8 header deprecation notes from nvidia-cuda-nvrtc
+os.environ.setdefault("PYTHONWARNINGS", "ignore::DeprecationWarning")
+# ─────────────────────────────────────────────────────────────────────────────
+
 from fastapi import FastAPI, Depends, Request, HTTPException, WebSocket
 from fastapi.websockets import WebSocketDisconnect
 import asyncio

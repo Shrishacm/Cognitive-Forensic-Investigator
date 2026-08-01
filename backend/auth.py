@@ -8,11 +8,10 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend import models
 import os
+from backend.dependencies import get_settings
 
-SECRET_KEY = os.getenv(
-    "SECRET_KEY",
-    "cfi-secret-key-change-in-production"
-)
+settings = get_settings()
+SECRET_KEY = settings.secret_key
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 480
 # 8 hours — forensic sessions are long

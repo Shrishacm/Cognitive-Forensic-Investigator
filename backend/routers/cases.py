@@ -557,6 +557,7 @@ Write the executive summary now:"""
                 "You are a senior forensic analyst writing official case reports. "
                 "Be professional, factual, and structured. Use markdown formatting."
             ),
+            max_tokens=2048,
         )
 
     # Persist as a flagged QueryLog entry so it survives between sessions
