@@ -15,22 +15,6 @@ import { fromUtc } from '../utils/time'
 import toast from 'react-hot-toast'
 import { ACTION_META } from '../constants/activityMeta'
 
-const ACTION_COLOR = {
-  CASE_CREATED:       '#10b981',
-  FILE_INGESTED:      '#818cf8',
-  FILE_UPLOADED:      '#60a5fa',
-  QUERY_MADE:         '#a78bfa',
-  REPORT_GENERATED:   '#f59e0b',
-  NOTE_ADDED:         '#fbbf24',
-  ENTITY_FLAGGED:     '#f97316',
-  CASE_UPDATED:       '#3b82f6',
-  CASE_CLOSED:        '#64748b',
-  LOGIN_SUCCESS:      '#10b981',
-  LOGIN_FAILED:       '#ef4444',
-  INTEGRITY_VERIFIED: '#10b981',
-  PROFILE_GENERATED:  '#a78bfa',
-}
-
 export default function DashboardPage() {
   const { user, isAdmin } = useAuth()
   const navigate = useNavigate()
@@ -56,11 +40,11 @@ export default function DashboardPage() {
 
   if (loading) return (
     <div className="animate-fade-in" style={{ width: '100%' }}>
-      <div className="skeleton" style={{ height: 34, width: 280, borderRadius: 8, marginBottom: 8 }} />
-      <div className="skeleton" style={{ height: 16, width: 220, borderRadius: 6, marginBottom: 28 }} />
+      <div className="skeleton" style={{ height: 34, width: 280, borderRadius: 4, marginBottom: 8 }} />
+      <div className="skeleton" style={{ height: 16, width: 220, borderRadius: 4, marginBottom: 28 }} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
         {Array(8).fill(0).map((_, i) => (
-          <div key={i} className="skeleton" style={{ height: 110, borderRadius: 14 }} />
+          <div key={i} className="skeleton" style={{ height: 110, borderRadius: 4 }} />
         ))}
       </div>
     </div>
@@ -73,79 +57,94 @@ export default function DashboardPage() {
     : 0
 
   const panelStyle = {
-    background: 'var(--color-white-04)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: 14,
+    background: '#0C1220',
+    border: '1px solid rgba(42, 110, 166, 0.22)',
+    borderRadius: 4,
     padding: '20px',
-    backdropFilter: 'blur(20px)',
   }
 
   return (
     <div className="animate-fade-in" style={{ width: '100%' }}>
 
       {/* Header */}
-      <div style={{ marginBottom: 28 }}>
+      <div style={{
+        marginBottom: 24,
+        paddingBottom: 16,
+        borderBottom: '1px solid rgba(42, 110, 166, 0.18)',
+        position: 'relative',
+      }}>
+        <div style={{
+          position: 'absolute',
+          left: -24,
+          top: 0,
+          bottom: 16,
+          width: '3px',
+          background: 'linear-gradient(180deg, #D4A32A 0%, rgba(212,163,42,0.2) 100%)',
+        }} />
+
         <h1 style={{
-          fontSize: 26,
+          fontFamily: "'Barlow Condensed', sans-serif",
+          fontSize: 28,
           fontWeight: 700,
-          letterSpacing: '-0.03em',
-          background: 'linear-gradient(135deg, #fff 0%, #818cf8 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-          lineHeight: 1.2,
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+          color: '#E8F0F8',
+          lineHeight: 1.1,
         }}>
-          Good {timeOfDay}, {firstName}
+          OPERATIONS COMMAND CENTER — {timeOfDay.toUpperCase()}, OPERATOR {firstName.toUpperCase()}
         </h1>
-        {/* Subtitle — was 0.3, now 0.6 */}
-        <p style={{ fontSize: 13, color: 'var(--color-white-6)', marginTop: 4 }}>
-          Here's what's happening across your cases
+        <p style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 11,
+          color: 'rgba(212, 163, 42, 0.75)',
+          marginTop: 4,
+          letterSpacing: '0.06em',
+        }}>
+          LIVE CASE INTELLIGENCE & FORENSIC METRICS OVERVIEW
         </p>
       </div>
 
       {/* Primary stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
-        <AnimStatCard icon={FolderOpen} label="Total Cases"    value={stats.cases?.total}       sub={`${stats.cases?.by_status?.Active || 0} active`} color="#818cf8" delay={0}   />
-        <AnimStatCard icon={FileText}   label="Evidence Files" value={stats.evidence?.total}     sub={`${evidenceRate}% indexed`}                       color="#60a5fa" delay={60}  />
-        <AnimStatCard icon={Bot}        label="AI Queries"     value={stats.queries?.total}      sub={`${stats.queries?.flagged || 0} flagged`}          color="#a78bfa" delay={120} />
-        <AnimStatCard icon={Network}    label="Entities"       value={stats.entities?.total}     sub="extracted from evidence"                           color="#34d399" delay={180} />
+        <AnimStatCard icon={FolderOpen} label="Total Cases"    value={stats.cases?.total}       sub={`${stats.cases?.by_status?.Active || 0} active`} color="#D4A32A" delay={0}   />
+        <AnimStatCard icon={FileText}   label="Evidence Files" value={stats.evidence?.total}     sub={`${evidenceRate}% indexed`}                       color="#7A9AB8" delay={60}  />
+        <AnimStatCard icon={Bot}        label="AI Queries"     value={stats.queries?.total}      sub={`${stats.queries?.flagged || 0} flagged`}          color="#D4A32A" delay={120} />
+        <AnimStatCard icon={Network}    label="Entities"       value={stats.entities?.total}     sub="extracted from evidence"                           color="#34D399" delay={180} />
       </div>
 
       {/* Secondary stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
-        <AnimStatCard icon={HardDrive}     label="Artifacts"  value={stats.artifacts?.total}                                                                          color="#94a3b8" delay={240} />
-        <AnimStatCard icon={AlertTriangle} label="Anomalies"  value={stats.artifacts?.anomalies}  color={stats.artifacts?.anomalies > 0 ? '#fbbf24' : '#34d399'}      delay={300} />
-        <AnimStatCard icon={CheckCircle}   label="Indexed"    value={stats.evidence?.indexed}                                                                          color="#34d399" delay={360} />
-        <AnimStatCard icon={Shield}        label="Failed"     value={stats.evidence?.failed || 0} color={stats.evidence?.failed > 0 ? '#f87171' : '#34d399'}           delay={420} />
+        <AnimStatCard icon={HardDrive}     label="Artifacts"  value={stats.artifacts?.total}                                                                          color="#7A9AB8" delay={240} />
+        <AnimStatCard icon={AlertTriangle} label="Anomalies"  value={stats.artifacts?.anomalies}  color={stats.artifacts?.anomalies > 0 ? '#D4A32A' : '#34D399'}      delay={300} />
+        <AnimStatCard icon={CheckCircle}   label="Indexed"    value={stats.evidence?.indexed}                                                                          color="#34D399" delay={360} />
+        <AnimStatCard icon={Shield}        label="Failed"     value={stats.evidence?.failed || 0} color={stats.evidence?.failed > 0 ? '#F87171' : '#34D399'}           delay={420} />
       </div>
 
       {/* System Alerts */}
       {stats.alerts?.length > 0 && (
         <div style={{
           marginBottom: 16,
-          background: 'rgba(255,255,255,0.025)',
-          border: '1px solid rgba(255,255,255,0.07)',
-          borderRadius: 14,
+          background: '#0C1220',
+          border: '1px solid rgba(212, 163, 42, 0.3)',
+          borderRadius: 4,
           padding: '16px 20px',
         }}>
           <p style={{
-            fontSize: 11, fontWeight: 600,
-            color: 'var(--color-white-3)',
+            fontFamily: "'Barlow Condensed', sans-serif",
+            fontSize: 12, fontWeight: 700,
+            color: '#D4A32A',
             textTransform: 'uppercase',
-            letterSpacing: '0.08em',
+            letterSpacing: '0.12em',
             marginBottom: 12,
           }}>
-            System Alerts
+            SYSTEM ALERTS & THREAT NOTIFICATIONS
           </p>
-          <div style={{
-            display: 'flex', gap: 10,
-            flexWrap: 'wrap',
-          }}>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             {stats.alerts.map((alert, i) => {
               const ALERT_CFG = {
-                critical: { color: '#e879f9', bg: 'rgba(232,121,249,0.08)', border: 'rgba(232,121,249,0.2)', dot: '#e879f9' },
-                warning: { color: '#fbbf24', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)', dot: '#f59e0b' },
-                info: { color: '#34d399', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.2)', dot: '#10b981' },
+                critical: { color: '#F87171', bg: 'rgba(197,48,48,0.12)', border: 'rgba(197,48,48,0.3)', dot: '#C53030' },
+                warning: { color: '#D4A32A', bg: 'rgba(212,163,42,0.10)', border: 'rgba(212,163,42,0.3)', dot: '#D4A32A' },
+                info: { color: '#34D399', bg: 'rgba(26,122,74,0.10)', border: 'rgba(26,122,74,0.3)', dot: '#1A7A4A' },
               }
               const cfg = ALERT_CFG[alert.level] || ALERT_CFG.info
               return (
@@ -153,21 +152,17 @@ export default function DashboardPage() {
                   key={i}
                   onClick={() => alert.action && navigate(alert.action)}
                   style={{
-                    flex: 1, minWidth: 200, padding: '10px 14px', borderRadius: 10,
+                    flex: 1, minWidth: 200, padding: '10px 14px', borderRadius: 3,
                     background: cfg.bg, border: `1px solid ${cfg.border}`,
                     cursor: alert.action ? 'pointer' : 'default',
                     display: 'flex', alignItems: 'flex-start', gap: 10,
                     transition: 'all 0.15s',
                   }}
-                  onMouseEnter={e => {
-                    if (alert.action) e.currentTarget.style.filter = 'brightness(1.15)'
-                  }}
-                  onMouseLeave={e => { e.currentTarget.style.filter = 'none' }}
                 >
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.dot, boxShadow: `0 0 6px ${cfg.dot}88`, flexShrink: 0, marginTop: 4 }} />
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.dot, flexShrink: 0, marginTop: 4 }} />
                   <div>
-                    <p style={{ fontSize: 12, fontWeight: 600, color: cfg.color, marginBottom: 2 }}>{alert.title}</p>
-                    <p style={{ fontSize: 11, color: 'var(--color-white-4)' }}>{alert.message}</p>
+                    <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', color: cfg.color, marginBottom: 2 }}>{alert.title}</p>
+                    <p style={{ fontSize: 11, color: '#C8D8E8' }}>{alert.message}</p>
                   </div>
                 </div>
               )
@@ -182,14 +177,12 @@ export default function DashboardPage() {
         {/* Cases panel */}
         <div className="animate-fade-up stagger-5" style={panelStyle}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Cases</h2>
+            <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#E8F0F8' }}>Cases Overview</h2>
             <button
               onClick={() => navigate('/cases')}
-              style={{ fontSize: 11, color: 'var(--color-white-5)', display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer' }}
-              onMouseEnter={e => e.currentTarget.style.color = '#818cf8'}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--color-white-5)'}
+              style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: '#D4A32A', display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer' }}
             >
-              View all <ArrowRight size={11} />
+              VIEW ALL <ArrowRight size={11} />
             </button>
           </div>
 
@@ -198,16 +191,15 @@ export default function DashboardPage() {
             {Object.entries(stats.cases?.by_status || {}).map(([status, count]) => {
               const max = Math.max(...Object.values(stats.cases?.by_status || { _: 1 }))
               const pct = max > 0 ? (count / max) * 100 : 0
-              const color = { Open: '#3b82f6', Active: '#10b981', Closed: '#64748b' }[status] || '#64748b'
+              const color = { Open: '#2A6EA6', Active: '#D4A32A', Closed: '#3D5068' }[status] || '#3D5068'
               return (
                 <div key={status}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    {/* Status label — was 0.4, now 0.7 */}
-                    <span style={{ fontSize: 12, color: 'var(--color-white-6)' }}>{status}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{count}</span>
+                    <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', color: '#7A9AB8' }}>{status.toUpperCase()}</span>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: '#E8F0F8' }}>{count}</span>
                   </div>
-                  <div style={{ height: 4, background: 'var(--color-white-08)', borderRadius: 99 }}>
-                    <div style={{ height: 4, borderRadius: 99, width: `${pct}%`, background: color, transition: 'width 0.7s ease' }} />
+                  <div style={{ height: 3, background: 'rgba(42, 110, 166, 0.15)', borderRadius: 2 }}>
+                    <div style={{ height: 3, borderRadius: 2, width: `${pct}%`, background: color, transition: 'width 0.7s ease' }} />
                   </div>
                 </div>
               )
@@ -222,16 +214,15 @@ export default function DashboardPage() {
                 onClick={() => navigate(`/cases/${c.id}`)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '7px 8px', borderRadius: 7,
+                  padding: '7px 8px', borderRadius: 3,
                   background: 'transparent', border: 'none', cursor: 'pointer',
                   textAlign: 'left', transition: 'all 0.12s',
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--color-white-06)'}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(42, 110, 166, 0.08)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
-                <FolderOpen size={12} style={{ color: 'var(--color-white-4)', flexShrink: 0 }} />
-                {/* Case name — was 0.5, now 0.8 */}
-                <span style={{ flex: 1, fontSize: 12, color: 'var(--color-white-6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <FolderOpen size={12} style={{ color: '#D4A32A', flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: 12, color: '#C8D8E8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {c.case_name}
                 </span>
                 <Badge label={c.status} />
@@ -242,14 +233,14 @@ export default function DashboardPage() {
 
         {/* Entity breakdown */}
         <div className="animate-fade-up stagger-6" style={panelStyle}>
-          <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>Entity Breakdown</h2>
+          <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#E8F0F8', marginBottom: 16 }}>Entity Distribution</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
-              ['Person',       '#f87171'],
-              ['Location',     '#34d399'],
-              ['Organization', '#fbbf24'],
-              ['IP',           '#c084fc'],
-              ['File',         '#4ade80'],
+              ['Person',       '#F87171'],
+              ['Location',     '#34D399'],
+              ['Organization', '#D4A32A'],
+              ['IP',           '#7A9AB8'],
+              ['File',         '#1A7A4A'],
             ].map(([type, color]) => {
               const count = stats.entities?.by_type?.[type] || 0
               const total = stats.entities?.total || 1
@@ -258,14 +249,13 @@ export default function DashboardPage() {
                 <div key={type}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0 }} />
-                      {/* Entity type — was 0.4, now 0.75 */}
-                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>{type}</span>
+                      <span style={{ width: 6, height: 6, borderRadius: 1, background: color, flexShrink: 0 }} />
+                      <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 600, letterSpacing: '0.04em', color: '#7A9AB8' }}>{type.toUpperCase()}</span>
                     </div>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{count}</span>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: '#E8F0F8' }}>{count}</span>
                   </div>
-                  <div style={{ height: 4, background: 'var(--color-white-08)', borderRadius: 99 }}>
-                    <div style={{ height: 4, borderRadius: 99, width: `${pct}%`, background: color, transition: 'width 0.7s ease' }} />
+                  <div style={{ height: 3, background: 'rgba(42, 110, 166, 0.15)', borderRadius: 2 }}>
+                    <div style={{ height: 3, borderRadius: 2, width: `${pct}%`, background: color, transition: 'width 0.7s ease' }} />
                   </div>
                 </div>
               )
@@ -274,24 +264,20 @@ export default function DashboardPage() {
 
           {stats.artifacts?.anomalies > 0 && (
             <div style={{
-              marginTop: 16, padding: '10px 12px', borderRadius: 8,
-              background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)',
+              marginTop: 16, padding: '10px 12px', borderRadius: 3,
+              background: 'rgba(212,163,42,0.10)', border: '1px solid rgba(212,163,42,0.3)',
               display: 'flex', alignItems: 'center', gap: 8,
             }}>
-              <AlertTriangle size={13} style={{ color: '#fbbf24', flexShrink: 0 }} />
-              <p style={{ fontSize: 12, color: '#fcd34d' }}>
-                {stats.artifacts.anomalies} anomalous file(s) detected
+              <AlertTriangle size={13} style={{ color: '#D4A32A', flexShrink: 0 }} />
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: '#D4A32A' }}>
+                {stats.artifacts.anomalies} anomalous file(s) flagged
               </p>
             </div>
           )}
         </div>
 
         {/* Recent activity */}
-        <div className="animate-fade-up stagger-7" style={{
-          background: 'rgba(255,255,255,0.025)',
-          border: '1px solid rgba(255,255,255,0.07)',
-          borderRadius: 14, padding: '20px',
-        }}>
+        <div className="animate-fade-up stagger-7" style={panelStyle}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -299,48 +285,39 @@ export default function DashboardPage() {
             marginBottom: 16,
           }}>
             <h2 style={{
-              fontSize: 13, fontWeight: 600,
-              color: 'var(--text-primary)',
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontSize: 16, fontWeight: 700,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: '#E8F0F8',
               display: 'flex',
               alignItems: 'center',
               gap: 8,
             }}>
-              <Activity size={14}
-                style={{
-                  color: 'var(--color-white-3)'
-                }} />
-              Recent Activity
+              <Activity size={14} style={{ color: '#D4A32A' }} />
+              System Audit Trail
             </h2>
             <button
               onClick={() => navigate('/activity')}
               style={{
                 fontSize: 11,
-                color: '#818cf8',
+                fontFamily: "'JetBrains Mono', monospace",
+                color: '#D4A32A',
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 4,
-                padding: '4px 8px',
-                borderRadius: 6,
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = 'rgba(99,102,241,0.1)'
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = 'none'
               }}
             >
-              View all recent activity
-              <ExternalLink size={10} />
+              ALL LOGS <ExternalLink size={10} />
             </button>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {(stats.recent_activity || []).map((event, i) => {
-              const meta = ACTION_META[event.action] || { color: '#64748b' }
+              const meta = ACTION_META[event.action] || { color: '#7A9AB8' }
               return (
                 <div key={i}
                   className="animate-fade-up"
@@ -349,13 +326,13 @@ export default function DashboardPage() {
                     alignItems: 'center',
                     gap: 10,
                     padding: '8px 10px',
-                    borderRadius: 8,
+                    borderRadius: 3,
                     animationDelay: `${i * 30}ms`,
                     transition: 'background 0.15s',
                     cursor: event.case_id ? 'pointer' : 'default',
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.background = 'var(--color-white-03)'
+                    e.currentTarget.style.background = 'rgba(42, 110, 166, 0.08)'
                   }}
                   onMouseLeave={e => {
                     e.currentTarget.style.background = 'none'
@@ -363,36 +340,28 @@ export default function DashboardPage() {
                   onClick={() => event.case_id && navigate(`/cases/${event.case_id}`)}
                 >
                   <span style={{
-                    width: 7, height: 7,
+                    width: 5, height: 5,
                     borderRadius: '50%',
-                    background: meta.color,
-                    boxShadow: `0 0 6px ${meta.color}99`,
+                    background: meta.color || '#D4A32A',
                     flexShrink: 0,
                   }} />
                   <span style={{
-                    fontSize: 12,
-                    color: 'var(--text-primary)',
+                    fontSize: 11,
+                    color: '#C8D8E8',
                     flex: 1,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
                   }}>
-                    {event.action.replace(/_/g, ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase())}
+                    {event.action.replace(/_/g, ' ').toUpperCase()}
                   </span>
                   <span style={{
-                    fontSize: 11,
-                    color: 'var(--color-white-2)',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 10,
+                    color: 'rgba(122, 154, 184, 0.6)',
                     flexShrink: 0,
                   }}>
                     {event.by}
-                  </span>
-                  <span style={{
-                    fontSize: 10,
-                    color: 'rgba(255,255,255,0.18)',
-                    flexShrink: 0,
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {formatDistanceToNow(fromUtc(event.at), { addSuffix: true })}
                   </span>
                 </div>
               )
@@ -405,31 +374,28 @@ export default function DashboardPage() {
       {isAdmin && stats.users && (
         <div className="animate-fade-up stagger-8" style={{ ...panelStyle, marginTop: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Users size={14} style={{ color: 'var(--color-white-5)' }} />
-              System Users
+            <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#E8F0F8', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Users size={14} style={{ color: '#D4A32A' }} />
+              OPERATOR & PERSONNEL DIRECTORY
             </h2>
             <button
               onClick={() => navigate('/admin/users')}
-              style={{ fontSize: 11, color: 'var(--color-white-5)', display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer' }}
-              onMouseEnter={e => e.currentTarget.style.color = '#818cf8'}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--color-white-5)'}
+              style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: '#D4A32A', display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer' }}
             >
-              Manage <ArrowRight size={11} />
+              MANAGE <ArrowRight size={11} />
             </button>
           </div>
           <div style={{ display: 'flex', gap: 32 }}>
             {[
-              { label: 'Total',  value: stats.users.total,  color: 'var(--text-primary)' },
-              { label: 'Active', value: stats.users.active, color: '#10b981' },
+              { label: 'Total',  value: stats.users.total,  color: '#E8F0F8' },
+              { label: 'Active', value: stats.users.active, color: '#34D399' },
               ...Object.entries(stats.users.by_role || {}).map(([role, count]) => ({
-                label: role, value: count, color: 'rgba(255,255,255,0.75)',
+                label: role, value: count, color: '#D4A32A',
               })),
             ].map(({ label, value, color }) => (
               <div key={label}>
-                <p style={{ fontSize: 24, fontWeight: 700, color, lineHeight: 1.2 }}>{value}</p>
-                {/* Label — was 0.25, now 0.55 */}
-                <p style={{ fontSize: 12, color: 'var(--color-white-5)', marginTop: 2 }}>{label}</p>
+                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 22, fontWeight: 700, color, lineHeight: 1.1 }}>{value}</p>
+                <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(122, 154, 184, 0.6)', marginTop: 2 }}>{label}</p>
               </div>
             ))}
           </div>

@@ -2,15 +2,14 @@ import React from 'react'
 
 /**
  * PageLayout — shared page wrapper.
- * Uses full available width (no maxWidth cap).
- * Animate entrance with fade-in.
+ * Mission-brief style header: amber accent stripe + monospace subtitle.
  */
 export default function PageLayout({
   title,
   subtitle,
   actions,
   children,
-  fullWidth = false,  // kept for backwards compat but no longer limits width
+  fullWidth = false,
 }) {
   return (
     <div
@@ -24,28 +23,42 @@ export default function PageLayout({
           justifyContent: 'space-between',
           marginBottom: 24,
           gap: 16,
+          paddingBottom: 16,
+          borderBottom: '1px solid rgba(42, 110, 166, 0.15)',
+          position: 'relative',
         }}>
-          <div>
+          {/* Left amber accent stripe */}
+          <div style={{
+            position: 'absolute',
+            left: -24,
+            top: 0,
+            bottom: 16,
+            width: '3px',
+            background: 'linear-gradient(180deg, #D4A32A 0%, rgba(212,163,42,0.2) 100%)',
+            borderRadius: '0 2px 2px 0',
+          }} />
+
+          <div style={{ paddingLeft: 4 }}>
             {title && (
               <h1 style={{
-                fontSize: 24,
+                fontFamily: "'Barlow Condensed', sans-serif",
+                fontSize: 26,
                 fontWeight: 700,
-                letterSpacing: '-0.025em',
-                lineHeight: 1.25,
-                background: 'linear-gradient(135deg, #ffffff 0%, #c4b5fd 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+                color: '#E8F0F8',
+                lineHeight: 1.1,
               }}>
                 {title}
               </h1>
             )}
             {subtitle && (
               <p style={{
-                fontSize: 14,
-                color: 'var(--color-white-6)',
-                marginTop: 3,
-                lineHeight: 1.5,
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 11,
+                color: 'rgba(212, 163, 42, 0.7)',
+                marginTop: 4,
+                letterSpacing: '0.06em',
               }}>
                 {subtitle}
               </p>

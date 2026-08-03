@@ -9,70 +9,84 @@ export default function AppBackground() {
       overflow: 'hidden',
       pointerEvents: 'none',
     }}>
-      {/* Deep base */}
+      {/* Deep navy base */}
       <div style={{
         position: 'absolute',
         inset: 0,
-        background: 'var(--bg-app)',
+        background: '#060B14',
       }} />
 
-      {/* Dot grid */}
+      {/* Precision grid — classified terminal overlay */}
       <div style={{
         position: 'absolute',
         inset: 0,
-        backgroundImage:
-          'radial-gradient(circle, rgba(255,255,255,0.045) 1px, transparent 1px)',
-        backgroundSize: '28px 28px',
+        backgroundImage: `
+          linear-gradient(rgba(42,110,166,0.06) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(42,110,166,0.06) 1px, transparent 1px)
+        `,
+        backgroundSize: '32px 32px',
       }} />
 
-      {/* Blob 1 — indigo */}
+      {/* Secondary micro-grid */}
       <div style={{
         position: 'absolute',
-        top: '-20%',
-        left: '-10%',
-        width: '55%',
-        height: '55%',
-        borderRadius: '50%',
-        background:
-          'radial-gradient(ellipse, rgba(79,70,229,0.18) 0%, transparent 70%)',
-        animation: 'blob-move-1 16s ease-in-out infinite',
-        filter: 'blur(1px)',
+        inset: 0,
+        backgroundImage: `
+          linear-gradient(rgba(42,110,166,0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(42,110,166,0.03) 1px, transparent 1px)
+        `,
+        backgroundSize: '8px 8px',
       }} />
 
-      {/* Blob 2 — cyan */}
+      {/* Amber vignette — top left command corner */}
       <div style={{
         position: 'absolute',
-        bottom: '-15%',
-        right: '-10%',
-        width: '50%',
-        height: '50%',
-        borderRadius: '50%',
-        background:
-          'radial-gradient(ellipse, rgba(6,182,212,0.13) 0%, transparent 70%)',
-        animation: 'blob-move-2 20s ease-in-out infinite',
-        filter: 'blur(1px)',
-      }} />
-
-      {/* Blob 3 — violet */}
-      <div style={{
-        position: 'absolute',
-        top: '40%',
-        left: '30%',
+        top: 0,
+        left: 0,
         width: '40%',
-        height: '40%',
-        borderRadius: '50%',
-        background:
-          'radial-gradient(ellipse, rgba(139,92,246,0.1) 0%, transparent 70%)',
-        animation: 'blob-move-3 24s ease-in-out infinite',
-        filter: 'blur(1px)',
+        height: '35%',
+        background: 'radial-gradient(ellipse at 0% 0%, rgba(212,163,42,0.07) 0%, transparent 70%)',
       }} />
 
-      {/* Vignette overlay */}
+      {/* Steel blue vignette — bottom right */}
       <div style={{
         position: 'absolute',
-        inset: 0,
-        background:
-          'radial-gradient(ellipse at 50% 0%, transparent 40%, rgba(4,5,11,0.6) 100%)',
+        bottom: 0,
+        right: 0,
+        width: '45%',
+        height: '40%',
+        background: 'radial-gradient(ellipse at 100% 100%, rgba(42,110,166,0.08) 0%, transparent 70%)',
+      }} />
+
+      {/* Top scanline band */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '1px',
+        background: 'linear-gradient(90deg, transparent 0%, rgba(212,163,42,0.4) 20%, rgba(212,163,42,0.6) 50%, rgba(212,163,42,0.4) 80%, transparent 100%)',
+      }} />
+
+      {/* Bottom scanline band */}
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '1px',
+        background: 'linear-gradient(90deg, transparent 0%, rgba(42,110,166,0.3) 30%, rgba(42,110,166,0.5) 50%, rgba(42,110,166,0.3) 70%, transparent 100%)',
+      }} />
+
+      {/* Very subtle moving scan line — gives terminal feel */}
+      <div style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        height: '120px',
+        background: 'linear-gradient(180deg, transparent 0%, rgba(212,163,42,0.012) 50%, transparent 100%)',
+        animation: 'scan-line 12s linear infinite',
+        willChange: 'transform',
       }} />
     </div>
   )

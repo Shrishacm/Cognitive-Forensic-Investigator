@@ -87,7 +87,6 @@ export default function CasesPage({ setActiveCaseId }) {
   const handleImport = async (e) => {
     const file = e.target.files[0]
     if (!file) return
-    // reset so the same file can be re-imported if needed
     e.target.value = ''
     const fd = new FormData()
     fd.append('file', file)
@@ -102,17 +101,16 @@ export default function CasesPage({ setActiveCaseId }) {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-6 h-6 border-2 border-accent rounded-full border-t-transparent animate-spin" />
+      <div className="w-6 h-6 border-2 border-amber-500 rounded-full border-t-transparent animate-spin" />
     </div>
   )
 
   return (
     <PageLayout
-      title="Cases"
-      subtitle={`${cases.length} investigation case(s)`}
+      title="Case Registry"
+      subtitle={`${cases.length} REGISTERED FORENSIC CASE FILE(S)`}
       actions={
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {/* Hidden file input for ZIP import */}
           <input
             ref={importRef}
             type="file"
@@ -122,111 +120,124 @@ export default function CasesPage({ setActiveCaseId }) {
           />
           <button
             onClick={() => importRef.current?.click()}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '8px 14px', borderRadius: 8,
-              background: 'var(--color-white-04)',
-              border: '1px solid rgba(255,255,255,0.09)',
-              color: 'var(--color-white-4)',
-              fontSize: 12, cursor: 'pointer',
-              transition: 'all 0.15s',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.color = 'var(--text-primary)'
-              e.currentTarget.style.borderColor = 'var(--color-white-2)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.color = 'var(--color-white-4)'
-              e.currentTarget.style.borderColor = 'var(--color-white-09)'
-            }}
+            className="btn-secondary"
           >
             <Upload size={13} />
-            Import Case
+            Import Case ZIP
           </button>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            className="btn-primary"
           >
-            <Plus size={16} />
-            New Case
+            <Plus size={14} />
+            New Case File
           </button>
         </div>
       }
     >
       {/* New Case Form */}
       {showForm && (
-        <div className="bg-surface-2 border border-line rounded-xl p-5 mb-6">
-          <h2 className="font-semibold text-ink-0 mb-4">Create New Case</h2>
-          <div className="grid grid-cols-2 gap-4">
+        <div style={{
+          background: '#0C1220',
+          border: '1px solid rgba(212, 163, 42, 0.35)',
+          borderRadius: 4,
+          padding: '20px',
+          marginBottom: 20,
+        }}>
+          <h2 style={{
+            fontFamily: "'Barlow Condensed', sans-serif",
+            fontSize: 18,
+            fontWeight: 700,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            color: '#D4A32A',
+            marginBottom: 16,
+          }}>
+            CREATE NEW FORENSIC CASE FILE
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label className="text-xs text-ink-2 mb-1 block">Case Name *</label>
+              <label style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(122,154,184,0.8)', display: 'block', marginBottom: 4 }}>
+                Case Name *
+              </label>
               <input
                 value={form.case_name}
                 onChange={e => setForm({ ...form, case_name: e.target.value })}
-                placeholder="Operation Phantom"
-                className="w-full bg-surface-1 border border-line rounded-lg px-3 py-2 text-sm text-ink-0 placeholder:text-ink-2 focus:outline-none focus:border-accent"
+                placeholder="Operation Phantom Trace"
+                className="input"
               />
             </div>
             <div>
-              <label className="text-xs text-ink-2 mb-1 block">Case Number</label>
+              <label style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(122,154,184,0.8)', display: 'block', marginBottom: 4 }}>
+                Case Number / Ref ID
+              </label>
               <input
                 value={form.case_number}
                 onChange={e => setForm({ ...form, case_number: e.target.value })}
-                placeholder="CFI-2025-001"
-                className="w-full bg-surface-1 border border-line rounded-lg px-3 py-2 text-sm text-ink-0 placeholder:text-ink-2 focus:outline-none focus:border-accent"
+                placeholder="CFI-2026-001"
+                className="input"
               />
             </div>
             <div>
-              <label className="text-xs text-ink-2 mb-1 block">Priority</label>
+              <label style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(122,154,184,0.8)', display: 'block', marginBottom: 4 }}>
+                Priority Rating
+              </label>
               <select
                 value={form.priority}
                 onChange={e => setForm({ ...form, priority: e.target.value })}
-                className="w-full bg-surface-1 border border-line rounded-lg px-3 py-2 text-sm text-ink-0 focus:outline-none focus:border-accent"
+                className="input"
               >
                 {['Low', 'Medium', 'High', 'Critical'].map(p => (
-                  <option key={p}>{p}</option>
+                  <option key={p} style={{ background: '#0C1220' }}>{p}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="text-xs text-ink-2 mb-1 block">Investigator Name</label>
+              <label style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(122,154,184,0.8)', display: 'block', marginBottom: 4 }}>
+                Lead Investigator
+              </label>
               <input
                 value={form.created_by}
                 onChange={e => setForm({ ...form, created_by: e.target.value })}
                 placeholder="Det. Markov"
-                className="w-full bg-surface-1 border border-line rounded-lg px-3 py-2 text-sm text-ink-0 placeholder:text-ink-2 focus:outline-none focus:border-accent"
+                className="input"
               />
             </div>
-            <div className="col-span-2">
-              <label className="text-xs text-ink-2 mb-1 block">Description</label>
+            <div style={{ gridColumn: 'span 2' }}>
+              <label style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(122,154,184,0.8)', display: 'block', marginBottom: 4 }}>
+                Case Overview & Objectives
+              </label>
               <textarea
                 value={form.description}
                 onChange={e => setForm({ ...form, description: e.target.value })}
                 rows={2}
-                placeholder="Brief case summary..."
-                className="w-full bg-surface-1 border border-line rounded-lg px-3 py-2 text-sm text-ink-0 placeholder:text-ink-2 focus:outline-none focus:border-accent resize-none"
+                placeholder="Brief summary of investigation scope..."
+                className="input"
+                style={{ resize: 'none' }}
               />
             </div>
-            <div className="col-span-2">
-              <label className="text-xs text-ink-2 mb-1 block">Tags (comma separated)</label>
+            <div style={{ gridColumn: 'span 2' }}>
+              <label style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(122,154,184,0.8)', display: 'block', marginBottom: 4 }}>
+                Tags / Classification Keywords (comma separated)
+              </label>
               <input
                 value={form.tags}
                 onChange={e => setForm({ ...form, tags: e.target.value })}
-                placeholder="cybercrime, financial"
-                className="w-full bg-surface-1 border border-line rounded-lg px-3 py-2 text-sm text-ink-0 placeholder:text-ink-2 focus:outline-none focus:border-accent"
+                placeholder="cybercrime, espionage, malware"
+                className="input"
               />
             </div>
           </div>
-          <div className="flex gap-3 mt-4">
+          <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
             <button
               onClick={handleCreate}
-              className="bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              className="btn-primary"
             >
-              Create Case
+              Initialize Case File
             </button>
             <button
               onClick={() => setShowForm(false)}
-              className="bg-surface-4 text-ink-1 px-4 py-2 rounded-lg text-sm transition-colors"
+              className="btn-secondary"
             >
               Cancel
             </button>
@@ -235,63 +246,86 @@ export default function CasesPage({ setActiveCaseId }) {
       )}
 
       {/* Case grid */}
-      <div className="grid grid-cols-1 gap-3">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {cases.map(c => (
           <button
             key={c.id}
             onClick={() => openCase(c)}
-            className="bg-surface-2 border border-line rounded-xl p-4 text-left hover:border-accent/50 hover:bg-surface-4 transition-all group relative"
+            style={{
+              background: '#0C1220',
+              border: '1px solid rgba(42, 110, 166, 0.22)',
+              borderRadius: 4,
+              padding: '16px',
+              textAlign: 'left',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              width: '100%',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'rgba(212, 163, 42, 0.40)'
+              e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.5)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'rgba(42, 110, 166, 0.22)'
+              e.currentTarget.style.boxShadow = 'none'
+            }}
           >
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <FolderOpen size={16} className="text-accent shrink-0" />
-                  <span className="font-semibold text-ink-0 truncate">{c.case_name}</span>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <FolderOpen size={16} style={{ color: '#D4A32A', flexShrink: 0 }} />
+                  <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#E8F0F8' }}>
+                    {c.case_name}
+                  </span>
                   {c.case_number && (
-                    <span className="text-xs text-ink-2 font-mono">#{c.case_number}</span>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: '#D4A32A' }}>#{c.case_number}</span>
                   )}
                 </div>
                 {c.description && (
-                  <p className="text-sm text-ink-1 truncate ml-6">{c.description}</p>
+                  <p style={{ fontSize: 12, color: '#7A9AB8', marginLeft: 24, marginBottom: 8 }} className="truncate">
+                    {c.description}
+                  </p>
                 )}
-                <div className="flex items-center gap-2 mt-2 ml-6">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 24, flexWrap: 'wrap' }}>
                   <Badge label={c.status} />
                   <Badge label={c.priority} />
-                  <span className="text-xs text-ink-2">
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'rgba(122, 154, 184, 0.6)' }}>
                     {c.evidence_count} evidence · {c.query_count} queries · {formatBytes(c.storage_bytes || 0)}
                   </span>
-                  <span className="text-xs text-ink-2 ml-auto">
-                    {formatDistanceToNow(fromUtc(c.created_at), { addSuffix: true })}
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: 'rgba(122, 154, 184, 0.4)', marginLeft: 'auto' }}>
+                    CREATED {formatDistanceToNow(fromUtc(c.created_at), { addSuffix: true }).toUpperCase()}
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-1 ml-2 shrink-0">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 12, flexShrink: 0 }}>
                 <button
                   id={`archive-case-${c.id}`}
                   onClick={e => { e.stopPropagation(); setConfirmArchive(c) }}
-                  className="p-1 rounded text-ink-2 hover:text-danger opacity-0 group-hover:opacity-100 transition-all"
+                  style={{ padding: 4, background: 'none', border: 'none', color: 'rgba(122, 154, 184, 0.4)', cursor: 'pointer', transition: 'color 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#F87171'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(122, 154, 184, 0.4)'}
                   title="Archive case"
                 >
-                  <Archive size={13} />
+                  <Archive size={14} />
                 </button>
-                <ChevronRight size={16} className="text-ink-2 group-hover:text-accent transition-colors mt-1" />
+                <ChevronRight size={16} style={{ color: '#D4A32A' }} />
               </div>
             </div>
           </button>
         ))}
         {cases.length === 0 && !showForm && (
-          <div className="text-center py-16 text-ink-2">
-            <FolderOpen size={40} className="mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No cases yet. Create your first investigation case.</p>
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: 'rgba(122, 154, 184, 0.4)' }}>
+            <FolderOpen size={40} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
+            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>NO CASE FILES REGISTERED IN SYSTEM</p>
           </div>
         )}
       </div>
 
       <ConfirmDialog
         isOpen={!!confirmArchive}
-        title="Archive Case"
-        message={`Archive "${confirmArchive?.case_name}"? It will be removed from the active list. Evidence files are preserved on disk.`}
-        confirmLabel="Archive"
+        title="Archive Case File"
+        message={`Archive "${confirmArchive?.case_name}"? It will be removed from the active registry. Evidence files are preserved on disk.`}
+        confirmLabel="Archive File"
         onConfirm={() => handleArchive(confirmArchive)}
         onCancel={() => setConfirmArchive(null)}
       />
