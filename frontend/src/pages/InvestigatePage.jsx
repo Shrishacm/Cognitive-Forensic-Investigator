@@ -517,15 +517,14 @@ export default function InvestigatePage() {
     }, 50)
 
     try {
-      // Build conversation history
-      // from last 5 real exchanges
+      // Build full conversation history for memory & lead tracking
       const history = queries
-        .slice(-5)
+        .filter(p => !p.is_loading)
+        .slice(-10)
         .map(prev => ({
           role: 'investigator',
           question: prev.question_text,
-          answer: prev.processed_response
-                  || ''
+          answer: prev.processed_response || ''
         }))
 
       const res = await askQuestion(
@@ -558,9 +557,12 @@ export default function InvestigatePage() {
       setQueries(prev =>
         prev.filter(p =>
           p.id !== tempId))
-      toast.error(
-        e.response?.data?.detail ||
-        'Query failed')
+      const errMsg = e.response?.data?.detail
+      if (typeof errMsg === 'string' && errMsg.length < 200) {
+        toast.error(errMsg)
+      } else {
+        toast.error('The AI could not process your query. Please check that Ollama is running and try again.')
+      }
     } finally {
       setLoading(false)
       setTimeout(() => {
@@ -745,7 +747,7 @@ export default function InvestigatePage() {
       </div>
 
       {/* Memory indicator */}
-      {queries.length > 0 && (
+      {queries.filter(q => !q.is_loading).length > 0 && (
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -764,11 +766,10 @@ export default function InvestigatePage() {
             fontSize: 11,
             color: 'var(--color-white-3)',
           }}>
-            Conversation memory active —
-            AI remembers last{' '}
+            CFI memory active — tracking last{' '}
             {Math.min(
-              queries.length, 5)}{' '}
-            exchange(s)
+              queries.filter(q => !q.is_loading).length, 10)}{' '}
+            exchange(s) and investigator leads
           </span>
         </div>
       )}

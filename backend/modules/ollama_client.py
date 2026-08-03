@@ -41,7 +41,7 @@ def is_model_available() -> bool:
 def generate_response(prompt: str,
                       system_prompt: str = "",
                       model: str = None,
-                      max_tokens: int = 400
+                      max_tokens: int = 600
                       ) -> str:
     if model is None:
         model = _settings().ollama_model
@@ -60,14 +60,15 @@ def generate_response(prompt: str,
                 "system": system_prompt,
                 "stream": False,
                 "options": {
-                    "temperature": 0.1,
+                    "temperature": 0.55,
                     "num_predict": max_tokens,
                     "stop": [
                         "Investigator Question:",
                         "Investigator:",
                         "\nQuestion:",
                         "\nUser:",
-                        "\nDirect Answer:"
+                        "\nDirect Answer:",
+                        "\nCFI:"
                     ]
                 }
             },
