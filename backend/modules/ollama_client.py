@@ -84,7 +84,7 @@ def generate_response(prompt: str,
                     ]
                 }
             },
-            timeout=120
+            timeout=300
         )
         if r.status_code == 200:
             return r.json().get("response", "")
