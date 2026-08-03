@@ -71,6 +71,7 @@ def generate_response(prompt: str,
                 "prompt": prompt,
                 "system": system_prompt,
                 "stream": False,
+                "keep_alive": "30s",  # Unload LLM from RAM/VRAM after 30 seconds of idle
                 "options": {
                     "temperature": 0.55,
                     "num_predict": max_tokens,

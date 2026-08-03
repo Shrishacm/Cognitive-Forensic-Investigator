@@ -194,6 +194,12 @@ def store_chunks(chunks: list[str],
                 points=points[batch_start:batch_start + _QDRANT_UPSERT_BATCH]
             )
 
+        # Clean up memory immediately
+        import gc
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
         return len(points)
 
     except Exception as e:
