@@ -107,6 +107,9 @@ export const flagQuery = (caseId, queryId) =>
 export const deleteQuery = (caseId, queryId) =>
   api.delete(`/cases/${caseId}/queries/${queryId}`)
 
+export const clearAllQueries = (caseId) =>
+  api.delete(`/cases/${caseId}/queries`)
+
 // Entities
 export const getEntities = (caseId, params = {}) =>
   api.get(`/cases/${caseId}/entities`, {

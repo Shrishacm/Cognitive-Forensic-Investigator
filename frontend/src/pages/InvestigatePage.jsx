@@ -10,8 +10,8 @@ import {
 } from 'lucide-react'
 import {
   getQueries, askQuestion,
-  deleteQuery, getEvidence,
-  generateCaseSummary,
+  deleteQuery, clearAllQueries,
+  getEvidence, generateCaseSummary,
   getLatestSummary
 } from '../api/client'
 import { useAuth } from
@@ -484,10 +484,16 @@ export default function InvestigatePage() {
     } catch {}
   }
 
-  const clearMemory = () => {
-    setQueries([])
-    toast.success(
-      'Conversation cleared')
+  const clearMemory = async () => {
+    try {
+      await clearAllQueries(caseId)
+      setQueries([])
+      setQueryPage(1)
+      setHasMoreQueries(false)
+      toast.success('Conversation history cleared')
+    } catch {
+      toast.error('Failed to clear conversation')
+    }
   }
 
   const handleAsk = async () => {

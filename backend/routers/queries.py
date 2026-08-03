@@ -387,3 +387,46 @@ def delete_query(
                 detail=str(exc),
             ).model_dump(),
         )
+
+
+# ---------------------------------------------------------------------------
+# DELETE /api/cases/{case_id}/queries — Clear all conversation history
+# ---------------------------------------------------------------------------
+
+@router.delete("", response_model=schemas.SuccessResponse)
+def clear_all_queries(
+    case_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_investigator),
+):
+    """Delete all query logs for a case (clear conversation)."""
+    try:
+        queries = (
+            db.query(models.QueryLog)
+            .filter(models.QueryLog.case_id == case_id)
+            .all()
+        )
+        count = len(queries)
+        for q in queries:
+            db.delete(q)
+        db.commit()
+
+        _create_audit(
+            db=db,
+            action_type="CONVERSATION_CLEARED",
+            performed_by=current_user.username,
+            details={"queries_deleted": count},
+            case_id=case_id,
+        )
+
+        return schemas.SuccessResponse(message=f"Cleared {count} query log(s).")
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=schemas.ErrorResponse(
+                error="Failed to clear queries",
+                detail=str(exc),
+            ).model_dump(),
+        )
+
