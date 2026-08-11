@@ -74,15 +74,14 @@
 }
 
 /* ── Design Tokens ──────────────────────────────────────────────── */
-:root {
-  /* Base surfaces */
+:root, .theme-legacy.dark {
   --bg-app:           #060B14;
+  --bg-sidebar:       #0C1220;
   --bg-panel:         #0C1220;
   --bg-panel-raised:  #101827;
   --bg-hover:         rgba(212, 163, 42, 0.05);
   --bg-active:        rgba(212, 163, 42, 0.10);
 
-  /* Text */
   --text-primary:     #C8D8E8;
   --text-secondary:   #7A9AB8;
   --text-muted:       #3D5068;
@@ -90,14 +89,12 @@
   --text-amber:       #D4A32A;
   --text-amber-dim:   #8A6A1A;
 
-  /* Borders */
   --border-subtle:    rgba(42, 110, 166, 0.12);
   --border-base:      rgba(42, 110, 166, 0.22);
   --border-strong:    rgba(42, 110, 166, 0.40);
   --border-amber:     rgba(212, 163, 42, 0.35);
   --border-amber-dim: rgba(212, 163, 42, 0.15);
 
-  /* Brand colours */
   --amber:            #D4A32A;
   --amber-dim:        #8A6A1A;
   --amber-glow:       rgba(212, 163, 42, 0.15);
@@ -109,61 +106,154 @@
   --emerald:          #1A7A4A;
   --emerald-dim:      rgba(26, 122, 74, 0.15);
 
-  /* Legacy compat — these map to new system */
   --brand-primary:    #D4A32A;
   --brand-light:      #E8C050;
   --brand-glow:       rgba(212, 163, 42, 0.12);
+  --brand-dim:        #8A6A1A;
+  --brand-muted:      #3D5068;
+  --brand-pale:       #F0D080;
 
-  /* Legacy alpha maps */
-  --color-white-03: rgba(200, 216, 232, 0.03);
-  --color-white-04: rgba(200, 216, 232, 0.04);
-  --color-white-05: rgba(200, 216, 232, 0.05);
-  --color-white-06: rgba(200, 216, 232, 0.06);
-  --color-white-07: rgba(200, 216, 232, 0.07);
-  --color-white-08: rgba(200, 216, 232, 0.08);
-  --color-white-09: rgba(200, 216, 232, 0.09);
-  --color-white-1:  rgba(200, 216, 232, 0.10);
-  --color-white-2:  rgba(200, 216, 232, 0.20);
-  --color-white-3:  rgba(200, 216, 232, 0.35);
-  --color-white-4:  rgba(200, 216, 232, 0.50);
-  --color-white-5:  rgba(200, 216, 232, 0.65);
-  --color-white-6:  rgba(200, 216, 232, 0.75);
-  --color-white-full: #C8D8E8;
-  --color-black-1:  rgba(6, 11, 20, 0.1);
-  --color-black-2:  rgba(6, 11, 20, 0.2);
-  --color-black-3:  rgba(6, 11, 20, 0.3);
-  --color-black-5:  rgba(6, 11, 20, 0.5);
-  --color-black-full: #060B14;
+  --success:          #10b981;
+  --warning:          #f59e0b;
+  --danger:           #ef4444;
+  --info:             #3b82f6;
 }
 
-/* Keep .dark class compatible — same tokens */
-.dark {
-  --bg-app:           #060B14;
-  --bg-panel:         #0C1220;
-  --bg-hover:         rgba(212, 163, 42, 0.05);
-  --bg-active:        rgba(212, 163, 42, 0.10);
-  --text-primary:     #C8D8E8;
-  --text-secondary:   #7A9AB8;
-  --text-muted:       #3D5068;
-  --border-subtle:    rgba(42, 110, 166, 0.12);
-  --border-base:      rgba(42, 110, 166, 0.22);
+.theme-legacy.light {
+  --bg-app:           #F1F5F9;
+  --bg-sidebar:       #E2E8F0;
+  --bg-panel:         #FFFFFF;
+  --bg-panel-raised:  #F8FAFC;
+  --bg-hover:         rgba(212, 163, 42, 0.10);
+  --bg-active:        rgba(212, 163, 42, 0.20);
+
+  --text-primary:     #1E293B;
+  --text-secondary:   #475569;
+  --text-muted:       #64748B;
+  --text-heading:     #0F172A;
+  --text-amber:       #D4A32A;
+  --text-amber-dim:   #B45309;
+
+  --border-subtle:    rgba(15, 23, 42, 0.1);
+  --border-base:      rgba(15, 23, 42, 0.2);
+  --border-strong:    rgba(15, 23, 42, 0.3);
+  --border-amber:     rgba(212, 163, 42, 0.5);
+  --border-amber-dim: rgba(212, 163, 42, 0.25);
+  
+  --amber:            #D4A32A;
+  --amber-dim:        #B45309;
+  --amber-glow:       rgba(212, 163, 42, 0.15);
+  --steel:            #2563EB;
+  --steel-dim:        #1D4ED8;
+  --steel-glow:       rgba(37, 99, 235, 0.15);
+  --crimson:          #DC2626;
+  --crimson-dim:      rgba(220, 38, 38, 0.15);
+  --emerald:          #059669;
+  --emerald-dim:      rgba(5, 150, 105, 0.15);
+
   --brand-primary:    #D4A32A;
-  --brand-light:      #E8C050;
+  --brand-light:      #F59E0B;
   --brand-glow:       rgba(212, 163, 42, 0.12);
-  --color-white-03: rgba(200, 216, 232, 0.03);
-  --color-white-04: rgba(200, 216, 232, 0.04);
-  --color-white-05: rgba(200, 216, 232, 0.05);
-  --color-white-06: rgba(200, 216, 232, 0.06);
-  --color-white-07: rgba(200, 216, 232, 0.07);
-  --color-white-08: rgba(200, 216, 232, 0.08);
-  --color-white-09: rgba(200, 216, 232, 0.09);
-  --color-white-1:  rgba(200, 216, 232, 0.10);
-  --color-white-2:  rgba(200, 216, 232, 0.20);
-  --color-white-3:  rgba(200, 216, 232, 0.35);
-  --color-white-4:  rgba(200, 216, 232, 0.50);
-  --color-white-5:  rgba(200, 216, 232, 0.65);
-  --color-white-6:  rgba(200, 216, 232, 0.75);
-  --color-white-full: #C8D8E8;
+  --brand-dim:        #B45309;
+  --brand-muted:      #64748B;
+  --brand-pale:       #FDE68A;
+
+  --success:          #059669;
+  --warning:          #D97706;
+  --danger:           #DC2626;
+  --info:             #2563EB;
+}
+
+/* Modern Light = clean white SaaS, like the reference photo */
+.theme-modern.light {
+  --bg-app:           #F8FAFC;
+  --bg-sidebar:       #1E293B; /* always dark sidebar */
+  --bg-panel:         #FFFFFF;
+  --bg-panel-raised:  #F1F5F9;
+  --bg-hover:         #F1F5F9;
+  --bg-active:        #EEF2FF;
+
+  --text-primary:     #1E293B;
+  --text-secondary:   #64748B;
+  --text-muted:       #94A3B8;
+  --text-heading:     #0F172A;
+  --text-amber:       #4F46E5;
+  --text-amber-dim:   #3730A3;
+
+  --border-subtle:    #F1F5F9;
+  --border-base:      #E2E8F0;
+  --border-strong:    #CBD5E1;
+  --border-amber:     #818CF8;
+  --border-amber-dim: #C7D2FE;
+
+  --amber:            #4F46E5;
+  --amber-dim:        #3730A3;
+  --amber-glow:       rgba(79, 70, 229, 0.10);
+  --steel:            #3B82F6;
+  --steel-dim:        #2563EB;
+  --steel-glow:       rgba(59, 130, 246, 0.10);
+  --crimson:          #EF4444;
+  --crimson-dim:      rgba(239, 68, 68, 0.10);
+  --emerald:          #10B981;
+  --emerald-dim:      rgba(16, 185, 129, 0.10);
+
+  --brand-primary:    #4F46E5;
+  --brand-light:      #818CF8;
+  --brand-glow:       rgba(79, 70, 229, 0.10);
+  --brand-dim:        #312E81;
+  --brand-muted:      #6366F1;
+  --brand-pale:       #E0E7FF;
+
+  --success:          #10b981;
+  --warning:          #f59e0b;
+  --danger:           #ef4444;
+  --info:             #3b82f6;
+}
+
+/* Modern Dark = deep slate, richest dark feel */
+.theme-modern.dark {
+  --bg-app:           #060D1A;
+  --bg-sidebar:       #030812;
+  --bg-panel:         #0E1826;
+  --bg-panel-raised:  #152033;
+  --bg-hover:         rgba(99, 102, 241, 0.06);
+  --bg-active:        rgba(99, 102, 241, 0.14);
+
+  --text-primary:     #CBD5E1;
+  --text-secondary:   #64748B;
+  --text-muted:       #334155;
+  --text-heading:     #E2E8F0;
+  --text-amber:       #818CF8;
+  --text-amber-dim:   #4F46E5;
+
+  --border-subtle:    rgba(99, 102, 241, 0.08);
+  --border-base:      rgba(99, 102, 241, 0.16);
+  --border-strong:    rgba(99, 102, 241, 0.30);
+  --border-amber:     rgba(99, 102, 241, 0.45);
+  --border-amber-dim: rgba(99, 102, 241, 0.15);
+
+  --amber:            #6366F1;
+  --amber-dim:        #4F46E5;
+  --amber-glow:       rgba(99, 102, 241, 0.15);
+  --steel:            #60A5FA;
+  --steel-dim:        #3B82F6;
+  --steel-glow:       rgba(96, 165, 250, 0.15);
+  --crimson:          #F87171;
+  --crimson-dim:      rgba(248, 113, 113, 0.15);
+  --emerald:          #34D399;
+  --emerald-dim:      rgba(52, 211, 153, 0.15);
+
+  --brand-primary:    #818CF8;
+  --brand-light:      #A5B4FC;
+  --brand-glow:       rgba(99, 102, 241, 0.14);
+  --brand-dim:        #4338CA;
+  --brand-muted:      #6366F1;
+  --brand-pale:       #C7D2FE;
+
+  --success:          #34d399;
+  --warning:          #fbbf24;
+  --danger:           #f87171;
+  --info:             #60a5fa;
 }
 
 /* ── Base Reset ─────────────────────────────────────────────────── */
@@ -496,3 +586,126 @@ button, a {
 .glow-indigo { box-shadow: 0 0 0 1px rgba(212,163,42,0.3), 0 0 16px rgba(212,163,42,0.1); }
 .glow-cyan   { box-shadow: 0 0 0 1px rgba(42,110,166,0.4), 0 0 16px rgba(42,110,166,0.12); }
 .glow-purple { box-shadow: 0 0 0 1px rgba(212,163,42,0.3), 0 0 16px rgba(212,163,42,0.1); }
+
+/* ── Modern theme overrides ─────────────────────────────────────── */
+.theme-modern * {
+  scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
+}
+.theme-modern ::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.3);
+}
+.theme-modern ::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.5);
+}
+
+/* ── Modern LIGHT: remap hardcoded dark inline style areas ────────
+   Since page components use hardcoded dark colors in inline styles,
+   we use a CSS filter on the main content area for light mode to
+   invert luminance and re-tint to a clean white theme.
+   We use a backdrop-filter workaround + explicit overrides.
+   The key insight: we override the CSS VARIABLES on the main element
+   so that any component using var(--bg-panel) etc gets white. ──── */
+
+/* White background on main content area */
+main[data-modern-light="true"] {
+  background: #F8FAFC;
+  color: #1E293B;
+}
+
+/* Re-map all CSS variable colors inside the light main area */
+main[data-modern-light="true"],
+main[data-modern-light="true"] * {
+  --bg-app:          #F8FAFC;
+  --bg-panel:        #FFFFFF;
+  --bg-panel-raised: #F8FAFC;
+  --bg-hover:        #F1F5F9;
+  --bg-active:       #EEF2FF;
+  --text-primary:    #1E293B;
+  --text-secondary:  #64748B;
+  --text-muted:      #94A3B8;
+  --text-heading:    #0F172A;
+  --border-subtle:   #F1F5F9;
+  --border-base:     #E2E8F0;
+  --border-strong:   #CBD5E1;
+  --brand-primary:   #4F46E5;
+  --brand-glow:      rgba(79,70,229,0.10);
+  --brand-light:     #818CF8;
+  --amber:           #4F46E5;
+  --amber-glow:      rgba(79,70,229,0.10);
+  --steel:           #3B82F6;
+  --emerald:         #10B981;
+  --crimson:         #EF4444;
+  --success:         #10b981;
+  --warning:         #f59e0b;
+  --danger:          #ef4444;
+  --info:            #3b82f6;
+}
+
+/* Force light backgrounds on hardcoded dark panel containers */
+main[data-modern-light="true"] [style*="background: #0C1220"],
+main[data-modern-light="true"] [style*="background: #060B14"],
+main[data-modern-light="true"] [style*="background: #101827"],
+main[data-modern-light="true"] [style*="background: #0E1826"],
+main[data-modern-light="true"] [style*="background: rgba(6, 11, 20"],
+main[data-modern-light="true"] [style*="background: rgb(6, 11, 20"],
+main[data-modern-light="true"] [style*="background: rgba(12, 18, 32"],
+main[data-modern-light="true"] [style*="background-color: #0C1220"] {
+  background: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+}
+
+/* Force text colors to dark in light mode */
+main[data-modern-light="true"] [style*="color: #E8F0F8"],
+main[data-modern-light="true"] [style*="color: #C8D8E8"],
+main[data-modern-light="true"] [style*="color: rgb(200, 216, 232"],
+main[data-modern-light="true"] [style*="color: rgb(232, 240, 248"] {
+  color: #1E293B !important;
+}
+
+main[data-modern-light="true"] [style*="color: #7A9AB8"],
+main[data-modern-light="true"] [style*="color: rgba(122, 154, 184"] {
+  color: #64748B !important;
+}
+
+main[data-modern-light="true"] [style*="color: rgba(212, 163, 42, 0.75)"],
+main[data-modern-light="true"] [style*="color: rgba(212, 163, 42, 0.8)"] {
+  color: #4F46E5 !important;
+}
+
+/* Skeleton loaders need to stay muted in light mode */
+main[data-modern-light="true"] .skeleton {
+  background: linear-gradient(90deg, #E2E8F0 25%, #F1F5F9 50%, #E2E8F0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Table rows in light mode */
+main[data-modern-light="true"] .table-row:hover {
+  background: #F8FAFC;
+}
+
+/* Modern sidebar always dark — not affected by light mode */
+.theme-modern aside {
+  background: var(--bg-sidebar) !important;
+  color: #F1F5F9 !important;
+}
+.theme-modern aside * {
+  --text-primary:   #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted:     #4B5563;
+  --bg-hover:       rgba(255,255,255,0.07);
+  --bg-active:      rgba(79,70,229,0.18);
+  --brand-primary:  #818CF8;
+  --brand-glow:     rgba(99,102,241,0.20);
+  --border-subtle:  rgba(255,255,255,0.06);
+  --border-base:    rgba(255,255,255,0.10);
+}
+
+/* Smooth theme transitions */
+*, *::before, *::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
+}
+button, a {
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+              opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}

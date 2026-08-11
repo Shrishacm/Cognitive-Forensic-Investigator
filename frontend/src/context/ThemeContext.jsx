@@ -3,37 +3,45 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(localStorage.getItem('cfi_theme') || 'system');
+  const [guiTheme, setGuiTheme] = useState(localStorage.getItem('cfi_gui_theme') || 'legacy');
+  const [colorMode, setColorMode] = useState(localStorage.getItem('cfi_color_mode') || 'system');
+  const [resolvedMode, setResolvedMode] = useState('dark');
 
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
+    root.classList.remove('theme-legacy', 'theme-modern', 'light', 'dark');
 
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      root.classList.add(systemTheme);
-    } else {
-      root.classList.add(theme);
+    root.classList.add(`theme-${guiTheme}`);
+
+    let activeMode = colorMode;
+    if (colorMode === 'system') {
+      activeMode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
-    
-    localStorage.setItem('cfi_theme', theme);
-  }, [theme]);
+    root.classList.add(activeMode);
+    setResolvedMode(activeMode);
 
-  // Listen for system theme changes if set to system
+    localStorage.setItem('cfi_gui_theme', guiTheme);
+    localStorage.setItem('cfi_color_mode', colorMode);
+  }, [guiTheme, colorMode]);
+
   useEffect(() => {
-    if (theme !== 'system') return;
+    if (colorMode !== 'system') return;
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e) => {
       const root = window.document.documentElement;
       root.classList.remove('light', 'dark');
-      root.classList.add(e.matches ? 'dark' : 'light');
+      const mode = e.matches ? 'dark' : 'light';
+      root.classList.add(mode);
+      setResolvedMode(mode);
     };
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme]);
+  }, [colorMode]);
+
+  const isModernLight = guiTheme === 'modern' && resolvedMode === 'light';
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider value={{ guiTheme, setGuiTheme, colorMode, setColorMode, resolvedMode, isModernLight }}>
       {children}
     </ThemeContext.Provider>
   );

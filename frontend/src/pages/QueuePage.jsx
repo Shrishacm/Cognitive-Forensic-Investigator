@@ -82,7 +82,7 @@ style.textContent = `
     50% { opacity: 0.4; }
   }
   .queue-row { transition: background 0.15s; }
-  .queue-row:hover { background: rgba(255,255,255,0.02) !important; }
+  .queue-row:hover { background: var(--bg-hover) !important; }
 `
 if (!document.getElementById('queue-styles')) {
   style.id = 'queue-styles'
@@ -126,19 +126,20 @@ function LogsModal({ caseId, onClose }) {
       display: 'flex', justifyContent: 'center', alignItems: 'center'
     }}>
       <div style={{
-        background: '#1e293b', padding: 20, borderRadius: 12,
-        width: '80%', height: '80%', display: 'flex', flexDirection: 'column'
+        background: 'var(--bg-panel)', padding: 20, borderRadius: 12,
+        width: '80%', height: '80%', display: 'flex', flexDirection: 'column',
+        border: '1px solid var(--border-base)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15 }}>
-          <h3 style={{ margin: 0, color: 'white' }}>Ingestion Logs</h3>
+          <h3 style={{ margin: 0, color: 'var(--text-heading)' }}>Ingestion Logs</h3>
           <button onClick={onClose} style={{
-            border: 'none', color: '#94a3b8', cursor: 'pointer',
-            padding: '4px 10px', borderRadius: 4, background: 'rgba(255,255,255,0.05)'
+            border: 'none', color: 'var(--text-muted)', cursor: 'pointer',
+            padding: '4px 10px', borderRadius: 4, background: 'var(--bg-hover)'
           }}>Close</button>
         </div>
         <div style={{
-          flex: 1, background: '#0f172a', padding: 15, borderRadius: 8,
-          overflowY: 'auto', fontFamily: 'monospace', fontSize: 12, color: '#38bdf8',
+          flex: 1, background: 'var(--bg-app)', padding: 15, borderRadius: 8,
+          overflowY: 'auto', fontFamily: 'monospace', fontSize: 12, color: 'var(--info)',
           whiteSpace: 'pre-wrap'
         }}>
           {logs}
@@ -202,17 +203,17 @@ function JobRow({ job, onRetry, onDelete, onStop, onViewLogs }) {
         gap: 12,
         alignItems: 'center',
         padding: '13px 20px',
-        borderBottom: '1px solid rgba(255,255,255,0.04)',
+        borderBottom: '1px solid var(--border-subtle)',
       }}
     >
       {/* File name */}
       <div style={{ minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 2 }}>
-          <HardDrive size={11} style={{ color: 'rgba(255,255,255,0.2)', flexShrink: 0 }} />
+          <HardDrive size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           <span style={{
             fontSize: 13,
             fontWeight: 500,
-            color: '#e2e4f0',
+            color: 'var(--text-primary)',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
@@ -229,7 +230,7 @@ function JobRow({ job, onRetry, onDelete, onStop, onViewLogs }) {
           </span>
         </div>
         <div style={{ display: 'flex', gap: 10, paddingLeft: 18 }}>
-          <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,0.18)' }}>
+          <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--text-muted)' }}>
             {job.case_id?.slice(0, 8)}…
           </span>
           {job.current_step && job.status === 'Running' && (
@@ -271,7 +272,7 @@ function JobRow({ job, onRetry, onDelete, onStop, onViewLogs }) {
             <div style={{
               height: 4,
               borderRadius: 2,
-              background: 'rgba(255,255,255,0.08)',
+              background: 'var(--border-subtle)',
               overflow: 'hidden',
               marginBottom: 4,
             }}>
@@ -284,10 +285,10 @@ function JobRow({ job, onRetry, onDelete, onStop, onViewLogs }) {
               }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>
+              <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
                 {progress}%
                 {displayElapsed != null && (
-                  <span style={{ marginLeft: 8, color: 'rgba(255,255,255,0.2)' }}>
+                  <span style={{ marginLeft: 8, color: 'var(--text-muted)' }}>
                     elapsed: {fmtSecs(displayElapsed)}
                   </span>
                 )}
@@ -300,12 +301,12 @@ function JobRow({ job, onRetry, onDelete, onStop, onViewLogs }) {
             </div>
           </div>
         ) : (
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             {job.status === 'Completed' ? (
               <>
                 100%
                 {job.elapsed_seconds != null && job.elapsed_seconds >= 0 && (
-                  <span style={{ marginLeft: 8, color: 'rgba(255,255,255,0.3)' }}>
+                  <span style={{ marginLeft: 8, color: 'var(--text-secondary)' }}>
                     (took {fmtSecs(job.elapsed_seconds)})
                   </span>
                 )}
@@ -317,24 +318,24 @@ function JobRow({ job, onRetry, onDelete, onStop, onViewLogs }) {
       </div>
 
       {/* Chunks */}
-      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace' }}>
+      <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
         {job.chunk_count != null ? job.chunk_count.toLocaleString() : '—'}
       </span>
 
       {/* Entities */}
-      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace' }}>
+      <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
         {job.entity_count != null ? job.entity_count : '—'}
       </span>
 
       {/* Time */}
       <div style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>
+        <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
           {job.status === 'Running' || job.status === 'Queued'
             ? elapsed(job.elapsed_seconds)
             : timeAgo(job.completed_at)}
         </div>
         {job.status === 'Queued' && job.estimated_seconds && (
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.18)', marginTop: 2 }}>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
             est. {elapsed(job.estimated_seconds)}
           </div>
         )}
@@ -413,13 +414,13 @@ function JobRow({ job, onRetry, onDelete, onStop, onViewLogs }) {
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              color: 'rgba(255,255,255,0.15)',
+              color: 'var(--text-muted)',
               display: 'flex',
               alignItems: 'center',
               transition: 'color 0.15s',
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#f87171' }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.15)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)' }}
           >
             <Trash2 size={12} />
           </button>
@@ -437,8 +438,8 @@ function StatCard({ label, value, color, active, onClick }) {
       style={{
         padding: '14px 16px',
         borderRadius: 10,
-        background: active ? `${color}18` : 'rgba(255,255,255,0.025)',
-        border: active ? `1px solid ${color}40` : '1px solid rgba(255,255,255,0.07)',
+        background: active ? `${color}18` : 'var(--bg-panel)',
+        border: active ? `1px solid ${color}40` : '1px solid var(--border-base)',
         cursor: 'pointer',
         textAlign: 'left',
         transition: 'all 0.15s',
@@ -554,9 +555,9 @@ export default function QueuePage() {
             gap: 6,
             padding: '8px 14px',
             borderRadius: 8,
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.09)',
-            color: 'rgba(255,255,255,0.4)',
+            background: 'var(--bg-hover)',
+            border: '1px solid var(--border-subtle)',
+            color: 'var(--text-muted)',
             fontSize: 12,
             cursor: 'pointer',
           }}
@@ -575,11 +576,11 @@ export default function QueuePage() {
         marginBottom: 20,
         padding: '10px 16px',
         borderRadius: 8,
-        background: 'rgba(255,255,255,0.02)',
-        border: '1px solid rgba(255,255,255,0.06)',
+        background: 'var(--bg-panel)',
+        border: '1px solid var(--border-subtle)',
       }}>
-        <Cpu size={12} style={{ color: 'rgba(255,255,255,0.25)' }} />
-        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
+        <Cpu size={12} style={{ color: 'var(--text-muted)' }} />
+        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
           {running > 0
             ? `${running} job(s) actively processing — the page updates automatically`
             : jobs.length === 0
@@ -627,8 +628,8 @@ export default function QueuePage() {
 
       {/* Table */}
       <div style={{
-        background: 'rgba(255,255,255,0.025)',
-        border: '1px solid rgba(255,255,255,0.07)',
+        background: 'var(--bg-panel)',
+        border: '1px solid var(--border-base)',
         borderRadius: 14,
         overflow: 'hidden',
       }}>
@@ -638,14 +639,14 @@ export default function QueuePage() {
           gridTemplateColumns: '2.2fr 1fr 1fr 0.7fr 0.7fr 0.8fr auto',
           gap: 12,
           padding: '10px 20px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          background: 'rgba(255,255,255,0.02)',
+          borderBottom: '1px solid var(--border-base)',
+          background: 'var(--bg-panel-raised)',
         }}>
           {['File', 'Status', 'Progress', 'Chunks', 'Entities', 'Time', ''].map(h => (
             <span key={h} style={{
               fontSize: 10,
               fontWeight: 600,
-              color: 'rgba(255,255,255,0.3)',
+              color: 'var(--text-secondary)',
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
             }}>
@@ -670,8 +671,8 @@ export default function QueuePage() {
           ))
         ) : sorted.length === 0 ? (
           <div style={{ padding: '60px 20px', textAlign: 'center' }}>
-            <Layers size={40} style={{ margin: '0 auto 12px', color: 'rgba(255,255,255,0.1)' }} />
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)' }}>
+            <Layers size={40} style={{ margin: '0 auto 12px', color: 'var(--text-muted)' }} />
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
               {filter === 'all'
                 ? 'No jobs yet. Upload evidence files to start ingestion.'
                 : `No ${filter} jobs`}

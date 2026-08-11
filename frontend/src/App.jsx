@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { useTheme } from './context/ThemeContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import ErrorBoundary from './components/ErrorBoundary'
 import Sidebar from './components/Sidebar'
@@ -42,7 +43,7 @@ const SIDEBAR_COLLAPSED = 52
 
 function AppLayout() {
   const { user } = useAuth()
-  // Global WebSocket notifications (ingestion complete, flags, notes, etc.)
+  const { isModernLight } = useTheme()
   useNotifications()
   const [systemStatus, setSystemStatus] = useState(null)
   const [activeCaseId, setActiveCaseId] = useState(null)
@@ -105,11 +106,14 @@ function AppLayout() {
         }}>
           {/* Search-only top bar */}
           <StatusBar />
-          <main style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '24px',
-          }}>
+          <main
+            data-modern-light={isModernLight ? 'true' : undefined}
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '24px 28px',
+            }}
+          >
             <ErrorBoundary>
             <Routes>
               <Route path="/" element={

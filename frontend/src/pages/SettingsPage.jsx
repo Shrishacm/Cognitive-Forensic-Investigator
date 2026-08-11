@@ -64,8 +64,10 @@ function AccountTab({ user }) {
 }
 
 function PreferencesTab() {
-  const { setTheme } = useTheme()
-  const [prefs, setPrefs] = useState({ theme: 'dark', timezone: 'UTC' })
+  const { guiTheme, setGuiTheme, colorMode, setColorMode } = useTheme()
+  const [prefs, setPrefs] = useState({ timezone: 'UTC' })
+  const [localGuiTheme, setLocalGuiTheme] = useState(guiTheme)
+  const [localColorMode, setLocalColorMode] = useState(colorMode)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -77,7 +79,7 @@ function PreferencesTab() {
     setLoading(true)
     try {
       const res = await getPreferences()
-      setPrefs({ theme: res.data.theme, timezone: res.data.timezone })
+      setPrefs({ timezone: res.data.timezone })
     } catch {
       toast.error('Failed to load preferences')
     } finally {
@@ -88,8 +90,10 @@ function PreferencesTab() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      await updatePreferences({ theme: prefs.theme, timezone: prefs.timezone })
-      setTheme(prefs.theme)
+      // Backend only stores timezone in this updated version, theme is handled locally
+      await updatePreferences({ timezone: prefs.timezone })
+      setGuiTheme(localGuiTheme)
+      setColorMode(localColorMode)
       toast.success('Preferences saved')
     } catch {
       toast.error('Failed to save preferences')
@@ -110,11 +114,24 @@ function PreferencesTab() {
       }}>
         <div style={{ marginBottom: 16 }}>
           <label style={{ fontSize: 11, color: 'var(--color-white-3)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>
-            Theme
+            GUI Theme
           </label>
           <select 
-            value={prefs.theme} 
-            onChange={e => setPrefs(p => ({ ...p, theme: e.target.value }))}
+            value={localGuiTheme} 
+            onChange={e => setLocalGuiTheme(e.target.value)}
+            style={selectStyle}
+          >
+            <option value="legacy">Legacy (Original)</option>
+            <option value="modern">Modern (Updated)</option>
+          </select>
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 11, color: 'var(--color-white-3)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>
+            Color Mode
+          </label>
+          <select 
+            value={localColorMode} 
+            onChange={e => setLocalColorMode(e.target.value)}
             style={selectStyle}
           >
             <option value="dark">Dark</option>

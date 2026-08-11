@@ -24,7 +24,7 @@ export default function PageLayout({
           marginBottom: 24,
           gap: 16,
           paddingBottom: 16,
-          borderBottom: '1px solid rgba(42, 110, 166, 0.15)',
+          borderBottom: '1px solid var(--border-base)',
           position: 'relative',
         }}>
           {/* Left amber accent stripe */}
@@ -34,7 +34,7 @@ export default function PageLayout({
             top: 0,
             bottom: 16,
             width: '3px',
-            background: 'linear-gradient(180deg, #D4A32A 0%, rgba(212,163,42,0.2) 100%)',
+            background: 'linear-gradient(180deg, var(--brand-primary) 0%, transparent 100%)',
             borderRadius: '0 2px 2px 0',
           }} />
 
@@ -46,7 +46,7 @@ export default function PageLayout({
                 fontWeight: 700,
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',
-                color: '#E8F0F8',
+                color: 'var(--text-heading)',
                 lineHeight: 1.1,
               }}>
                 {title}
@@ -56,7 +56,7 @@ export default function PageLayout({
               <p style={{
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: 11,
-                color: 'rgba(212, 163, 42, 0.7)',
+                color: 'var(--text-amber)',
                 marginTop: 4,
                 letterSpacing: '0.06em',
               }}>

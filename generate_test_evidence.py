@@ -7,9 +7,9 @@ the Cognitive Forensic Investigator ingestion pipeline.
 import random, hashlib, uuid, os, sys, time
 from datetime import datetime, timedelta
 
-TARGET_MB   = 10
+TARGET_MB   = int(sys.argv[1]) if len(sys.argv) > 1 else 10
 TARGET_BYTES = TARGET_MB * 1024 * 1024
-OUT_PATH     = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_evidence_10mb.txt")
+OUT_PATH     = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"test_evidence_{TARGET_MB}mb.txt")
 
 SUSPECTS = [
     ("Marcus Blackwell",  "m.blackwell@vortexcorp.com",   "+1-202-555-0147"),

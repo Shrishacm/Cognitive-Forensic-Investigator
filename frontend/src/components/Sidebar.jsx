@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { getCases } from '../api/client'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 
 const NAV_TOP = [
   { icon: LayoutDashboard, label: 'Dashboard',     path: '/'       },
@@ -40,10 +41,10 @@ const CASE_NAV = [
 ]
 
 const STATUS_COLOR = {
-  Open:     '#2A6EA6',
-  Active:   '#D4A32A',
-  Closed:   '#3D5068',
-  Archived: '#1A2535',
+  Open:     'var(--info)',
+  Active:   'var(--brand-primary)',
+  Closed:   'var(--text-muted)',
+  Archived: 'var(--bg-panel-raised)',
 }
 
 const STATUS_LABEL = {
@@ -71,12 +72,12 @@ function NavItem({ icon: Icon, label, path, active, onClick, collapsed }) {
           justifyContent: collapsed ? 'center' : 'flex-start',
           borderRadius: 3,
           background: active
-            ? 'rgba(212, 163, 42, 0.10)'
-            : hovered ? 'rgba(42, 110, 166, 0.08)' : 'transparent',
+            ? 'var(--brand-glow)'
+            : hovered ? 'var(--bg-active)' : 'transparent',
           border: 'none',
-          borderLeft: active ? '2px solid #D4A32A' : '2px solid transparent',
+          borderLeft: active ? '2px solid var(--brand-primary)' : '2px solid transparent',
           cursor: 'pointer',
-          color: active ? '#D4A32A' : hovered ? '#C8D8E8' : 'rgba(200, 216, 232, 0.5)',
+          color: active ? 'var(--brand-primary)' : hovered ? 'var(--text-primary)' : 'var(--text-secondary)',
           fontSize: 12,
           fontWeight: active ? 600 : 400,
           fontFamily: "'Inter', sans-serif",
@@ -114,11 +115,11 @@ function CaseNavItem({ icon: Icon, label, active, onClick, collapsed }) {
         padding: collapsed ? '5px 0' : '4px 8px',
         justifyContent: collapsed ? 'center' : 'flex-start',
         borderRadius: 2,
-        background: active ? 'rgba(212, 163, 42, 0.08)' : hovered ? 'rgba(42,110,166,0.06)' : 'transparent',
+        background: active ? 'var(--brand-glow)' : hovered ? 'var(--bg-active)' : 'transparent',
         border: 'none',
-        borderLeft: active ? '2px solid rgba(212, 163, 42, 0.6)' : '2px solid transparent',
+        borderLeft: active ? '2px solid var(--brand-primary)' : '2px solid transparent',
         cursor: 'pointer',
-        color: active ? '#D4A32A' : hovered ? '#C8D8E8' : 'rgba(200, 216, 232, 0.45)',
+        color: active ? 'var(--brand-primary)' : hovered ? 'var(--text-primary)' : 'var(--text-secondary)',
         fontSize: 11,
         fontWeight: active ? 500 : 400,
         textAlign: 'left',
@@ -137,6 +138,7 @@ export default function Sidebar({ activeCaseId, setActiveCaseId, status, collaps
   const navigate = useNavigate()
   const location = useLocation()
   const { user, signOut, isAdmin } = useAuth()
+  const { guiTheme } = useTheme()
   const [cases, setCases] = useState([])
   const [expanded, setExpanded] = useState(activeCaseId)
   const [search, setSearch] = useState('')
@@ -164,10 +166,10 @@ export default function Sidebar({ activeCaseId, setActiveCaseId, status, collaps
   return (
     <aside style={{
       width: '100%',
-      background: 'rgba(6, 10, 18, 0.97)',
+      background: 'var(--bg-sidebar)',
       backdropFilter: 'blur(16px)',
       WebkitBackdropFilter: 'blur(16px)',
-      borderRight: '1px solid rgba(42, 110, 166, 0.20)',
+      borderRight: '1px solid var(--border-base)',
       display: 'flex',
       flexDirection: 'column',
       height: '100vh',
@@ -180,7 +182,7 @@ export default function Sidebar({ activeCaseId, setActiveCaseId, status, collaps
         position: 'absolute',
         top: 0, left: 0, right: 0,
         height: '2px',
-        background: 'linear-gradient(90deg, #D4A32A, rgba(212,163,42,0.2))',
+        background: 'linear-gradient(90deg, var(--brand-primary), var(--brand-glow))',
       }} />
 
       {/* Brand header */}
@@ -191,7 +193,7 @@ export default function Sidebar({ activeCaseId, setActiveCaseId, status, collaps
           style={{
             width: '100%',
             padding: '16px 0',
-            borderBottom: '1px solid rgba(42, 110, 166, 0.18)',
+            borderBottom: '1px solid var(--border-subtle)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -203,18 +205,18 @@ export default function Sidebar({ activeCaseId, setActiveCaseId, status, collaps
         >
           <div style={{
             width: 30, height: 30,
-            background: 'rgba(212, 163, 42, 0.12)',
-            border: '1px solid rgba(212, 163, 42, 0.40)',
+            background: 'var(--brand-glow)',
+            border: '1px solid var(--border-amber-dim)',
             borderRadius: 4,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Shield size={15} color="#D4A32A" />
+            <Shield size={15} color="var(--brand-primary)" />
           </div>
         </button>
       ) : (
         <div style={{
           padding: '13px 12px',
-          borderBottom: '1px solid rgba(42, 110, 166, 0.18)',
+          borderBottom: '1px solid var(--border-subtle)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -224,12 +226,12 @@ export default function Sidebar({ activeCaseId, setActiveCaseId, status, collaps
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
             <div style={{
               width: 32, height: 32, flexShrink: 0,
-              background: 'rgba(212, 163, 42, 0.10)',
-              border: '1px solid rgba(212, 163, 42, 0.35)',
+              background: 'var(--brand-glow)',
+              border: '1px solid var(--border-amber-dim)',
               borderRadius: 4,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <Shield size={16} color="#D4A32A" />
+              <Shield size={16} color="var(--brand-primary)" />
             </div>
             <div style={{ minWidth: 0 }}>
               <p style={{
@@ -238,7 +240,7 @@ export default function Sidebar({ activeCaseId, setActiveCaseId, status, collaps
                 fontWeight: 700,
                 letterSpacing: '0.12em',
                 textTransform: 'uppercase',
-                color: '#D4A32A',
+                color: 'var(--brand-primary)',
                 lineHeight: 1.1,
               }}>
                 CFI
@@ -246,7 +248,7 @@ export default function Sidebar({ activeCaseId, setActiveCaseId, status, collaps
               <p style={{
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: 9,
-                color: 'rgba(122, 154, 184, 0.7)',
+                color: 'var(--text-muted)',
                 letterSpacing: '0.06em',
                 textTransform: 'uppercase',
               }}>
@@ -261,15 +263,15 @@ export default function Sidebar({ activeCaseId, setActiveCaseId, status, collaps
               width: 22, height: 22,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               borderRadius: 3,
-              border: '1px solid rgba(42, 110, 166, 0.25)',
+              border: '1px solid var(--border-subtle)',
               background: 'transparent',
-              color: 'rgba(122, 154, 184, 0.5)',
+              color: 'var(--text-secondary)',
               cursor: 'pointer',
               flexShrink: 0,
               transition: 'all 0.15s',
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#D4A32A'; e.currentTarget.style.borderColor = 'rgba(212,163,42,0.4)' }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(122, 154, 184, 0.5)'; e.currentTarget.style.borderColor = 'rgba(42, 110, 166, 0.25)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--brand-primary)'; e.currentTarget.style.borderColor = 'var(--border-amber-dim)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-subtle)' }}
           >
             <PanelLeftClose size={12} />
           </button>
@@ -286,7 +288,7 @@ export default function Sidebar({ activeCaseId, setActiveCaseId, status, collaps
             fontFamily: "'Barlow Condensed', sans-serif",
             fontSize: 9,
             fontWeight: 700,
-            color: 'rgba(122, 154, 184, 0.45)',
+            color: 'var(--text-muted)',
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
             padding: '0 4px',
@@ -305,7 +307,7 @@ export default function Sidebar({ activeCaseId, setActiveCaseId, status, collaps
       </div>
 
       {/* Divider */}
-      <div style={{ height: 1, margin: collapsed ? '4px 8px' : '4px 10px', background: 'rgba(42, 110, 166, 0.15)', flexShrink: 0 }} />
+      <div style={{ height: 1, margin: collapsed ? '4px 8px' : '4px 10px', background: 'var(--border-subtle)', flexShrink: 0 }} />
 
       {/* Cases section header + search */}
       {!collapsed && (

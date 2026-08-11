@@ -14,9 +14,12 @@ import { formatDistanceToNow } from 'date-fns'
 import { fromUtc } from '../utils/time'
 import toast from 'react-hot-toast'
 import { ACTION_META } from '../constants/activityMeta'
+import { useTheme } from '../context/ThemeContext'
+import ModernDashboard from './ModernDashboard'
 
 export default function DashboardPage() {
   const { user, isAdmin } = useAuth()
+  const { guiTheme } = useTheme()
   const navigate = useNavigate()
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -51,6 +54,10 @@ export default function DashboardPage() {
   )
 
   if (!stats) return null
+
+  if (guiTheme === 'modern') {
+    return <ModernDashboard stats={stats} />
+  }
 
   const evidenceRate = stats.evidence?.total
     ? Math.round((stats.evidence.indexed / stats.evidence.total) * 100)
