@@ -7,6 +7,7 @@ export default function LiveIngestionHardwareMonitor() {
   const [telemetry, setTelemetry] = useState(null)
   const [hardwareMode, setHardwareMode] = useState('auto')
   const [saving, setSaving] = useState(false)
+  const [availableBackends, setAvailableBackends] = useState(['auto', 'cpu'])
 
   const fetchTelemetry = async () => {
     try {
@@ -19,8 +20,12 @@ export default function LiveIngestionHardwareMonitor() {
         setTelemetry(prev => ({
           ...prev,
           gpu: hwRes.data.gpu_info || {},
-          hardware_mode: hwRes.data.hardware_mode || 'auto'
+          hardware_mode: hwRes.data.hardware_mode || 'auto',
+          embedding_device: hwRes.data.embedding_device || hwRes.data.vector_embedding_device || 'cpu',
         }))
+        if (hwRes.data.available_backends?.length) {
+          setAvailableBackends(hwRes.data.available_backends)
+        }
         if (!saving && hwRes.data.hardware_mode) {
           setHardwareMode(hwRes.data.hardware_mode)
         }
@@ -53,8 +58,12 @@ export default function LiveIngestionHardwareMonitor() {
         setTelemetry(prev => ({
           ...prev,
           gpu: res.data.gpu_info,
-          hardware_mode: mode
+          hardware_mode: mode,
+          embedding_device: res.data.embedding_device || mode,
         }))
+      }
+      if (res.data?.available_backends?.length) {
+        setAvailableBackends(res.data.available_backends)
       }
     } catch {
       toast.error('Failed to change compute mode')
@@ -66,6 +75,8 @@ export default function LiveIngestionHardwareMonitor() {
   const gpu = telemetry?.gpu || {}
   const sys = telemetry?.system || {}
   const activeMode = telemetry?.hardware_mode || hardwareMode || 'auto'
+  // Actual embedding device reported by backend (what the model is truly on)
+  const embeddingDevice = telemetry?.embedding_device || gpu.torch_device || 'cpu'
 
   const vramTotal = gpu.vram_total_mb || 0
   const vramUsed = gpu.vram_used_mb || 0
@@ -112,22 +123,27 @@ export default function LiveIngestionHardwareMonitor() {
           </div>
         </div>
 
-        {/* Quick Mode Toggle Selector */}
+        {/* Quick Mode Toggle Selector — buttons rendered from available backends */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 4,
           background: 'var(--bg-app)', padding: 4, borderRadius: 8,
           border: '1px solid var(--border-subtle)'
         }}>
-          {[
-            { id: 'auto', label: '⚡ Auto' },
-            { id: 'cuda', label: '🚀 GPU Mode' },
-            { id: 'cpu', label: '💻 CPU Mode' }
-          ].map(m => {
-            const isSelected = activeMode === m.id
+          {availableBackends.map(id => {
+            const isSelected = activeMode === id
+            // Human-readable labels that adapt to what's detected
+            const labelMap = {
+              auto: '⚡ Auto',
+              cuda: gpu.backend_type === 'AMD ROCm' ? '🔴 ROCm GPU' : '🚀 CUDA GPU',
+              mps:  '🍎 Apple MPS',
+              xpu:  '🔵 Intel XPU',
+              cpu:  '💻 CPU Mode',
+            }
+            const label = labelMap[id] || `🔧 ${id.toUpperCase()}`
             return (
               <button
-                key={m.id}
-                onClick={() => handleSelectMode(m.id)}
+                key={id}
+                onClick={() => handleSelectMode(id)}
                 disabled={saving}
                 style={{
                   padding: '5px 12px',
@@ -142,7 +158,7 @@ export default function LiveIngestionHardwareMonitor() {
                   boxShadow: isSelected ? '0 2px 8px rgba(99, 102, 241, 0.3)' : 'none'
                 }}
               >
-                {m.label}
+                {label}
               </button>
             )
           })}
@@ -215,7 +231,7 @@ export default function LiveIngestionHardwareMonitor() {
             }} />
           </div>
           <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
-            Embeddings: <strong style={{ color: activeMode !== 'cpu' ? 'var(--amber)' : 'var(--text-muted)' }}>{activeMode !== 'cpu' && gpu.has_gpu ? (gpu.torch_device ? gpu.torch_device.toUpperCase() : 'GPU') : 'CPU'}</strong>
+            Embeddings: <strong style={{ color: embeddingDevice !== 'cpu' ? 'var(--amber)' : 'var(--text-muted)' }}>{embeddingDevice.toUpperCase()}</strong>
           </div>
         </div>
 

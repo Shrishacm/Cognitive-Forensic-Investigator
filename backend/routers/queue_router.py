@@ -57,13 +57,18 @@ def get_system_info_endpoint(
 def get_hardware_preference(
     current_user = Depends(get_current_user)
 ):
-    gpu = get_gpu_info()
-    current_mode = os.getenv("HARDWARE_MODE", "auto").lower()
+    from backend.modules.hardware import (
+        get_hardware_info, detect_device, list_available_backends
+    )
+    gpu = get_hardware_info()
+    actual_device = detect_device()
     return {
-        "hardware_mode": current_mode,
-        "vector_embedding_device": "cuda" if current_mode != "cpu" else "cpu",
-        "whisper_device": "cuda" if current_mode != "cpu" else "cpu",
-        "gpu_info": gpu
+        "hardware_mode":          gpu["hardware_mode"],
+        "vector_embedding_device": actual_device,
+        "whisper_device":          actual_device,
+        "embedding_device":        gpu.get("embedding_device", actual_device),
+        "available_backends":      list_available_backends(),
+        "gpu_info":                gpu,
     }
 
 @router.post("/hardware-preference")
@@ -71,15 +76,26 @@ def set_hardware_preference(
     body: HardwarePreferenceRequest,
     current_user = Depends(require_analyst)
 ):
-    env_path = ".env"
-    mode = body.hardware_mode.lower()
-    if mode not in ["auto", "cuda", "cpu"]:
+    from backend.modules.hardware import (
+        list_available_backends, get_hardware_info, invalidate_cache
+    )
+    mode = body.hardware_mode.lower().strip()
+
+    # Accept any backend that's actually available on this machine,
+    # or "auto" which is always valid.
+    valid_modes = list_available_backends()  # e.g. ["auto", "cuda", "cpu"]
+    if mode not in valid_modes:
+        # Graceful fallback — accept the request but normalise to auto
+        print(f"[QUEUE] Unknown hardware mode '{mode}' (available: {valid_modes}). Falling back to auto.")
         mode = "auto"
 
     os.environ["HARDWARE_MODE"] = mode
 
+    # Invalidate the hardware detection cache so next poll re-probes
+    invalidate_cache()
+
     try:
-        if os.path.exists(env_path):
+        if os.path.exists(env_path := ".env"):
             with open(env_path, "r") as f:
                 content = f.read()
             if "HARDWARE_MODE=" in content:
@@ -91,13 +107,14 @@ def set_hardware_preference(
     except Exception as e:
         print(f"Error updating .env: {e}")
 
-    gpu = get_gpu_info()
+    gpu = get_hardware_info()
 
     return {
-        "status": "success",
-        "message": f"Hardware compute preference updated to {mode.upper()}",
-        "hardware_mode": mode,
-        "gpu_info": gpu
+        "status":          "success",
+        "message":         f"Hardware compute preference updated to {mode.upper()}",
+        "hardware_mode":   mode,
+        "available_backends": valid_modes,
+        "gpu_info":        gpu,
     }
 
 @router.post("/estimate")

@@ -7,102 +7,15 @@ import subprocess
 from typing import Optional
 from backend.dependencies import get_settings
 
+
 def get_gpu_info() -> dict:
     """
-    Dynamically auto-detects GPU hardware across any system/vendor:
-    - NVIDIA CUDA (Linux / Windows)
-    - Apple Silicon MPS (macOS M1/M2/M3/M4)
-    - AMD ROCm
-    - CPU Fallback
-    Zero hardcoded values or assumptions.
+    Returns full GPU/hardware telemetry dict.
+    Delegates to hardware.py — the single source of truth.
+    Covers NVIDIA CUDA, AMD ROCm, Apple MPS, Intel XPU, and CPU.
     """
-    has_gpu = False
-    gpu_name = "No Discrete GPU Detected"
-    vram_total_mb = 0
-    vram_used_mb = 0
-    vram_free_mb = 0
-    gpu_util_percent = 0
-    gpu_temp_c = None
-    cuda_version = None
-    torch_device = "cpu"
-    backend_type = "CPU"
-
-    # 1. Check NVIDIA GPU via nvidia-smi
-    try:
-        cmd = ["nvidia-smi", "--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,name", "--format=csv,noheader,nounits"]
-        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=1)
-        if res.returncode == 0 and res.stdout.strip():
-            parts = [p.strip() for p in res.stdout.strip().split(",")]
-            if len(parts) >= 5:
-                gpu_util_percent = int(parts[0])
-                vram_used_mb = int(parts[1])
-                vram_total_mb = int(parts[2])
-                vram_free_mb = max(0, vram_total_mb - vram_used_mb)
-                gpu_temp_c = int(parts[3])
-                gpu_name = parts[4]
-                has_gpu = True
-                backend_type = "NVIDIA CUDA"
-    except Exception:
-        pass
-
-    # 2. Check PyTorch Acceleration (CUDA, MPS, or ROCm)
-    try:
-        import torch
-
-        if torch.cuda.is_available():
-            torch_device = "cuda"
-            has_gpu = True
-            cuda_version = torch.version.cuda
-            if gpu_name == "No Discrete GPU Detected":
-                gpu_name = torch.cuda.get_device_name(0)
-                backend_type = "NVIDIA CUDA"
-            if vram_total_mb == 0:
-                try:
-                    free_b, total_b = torch.cuda.mem_get_info(0)
-                    vram_free_mb = int(free_b / 1024 / 1024)
-                    vram_total_mb = int(total_b / 1024 / 1024)
-                    vram_used_mb = vram_total_mb - vram_free_mb
-                except Exception:
-                    pass
-
-        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-            torch_device = "mps"
-            has_gpu = True
-            backend_type = "Apple Silicon MPS"
-            gpu_name = f"Apple Silicon ({platform.processor() or 'Metal'})"
-            mem = psutil.virtual_memory()
-            vram_total_mb = int(mem.total / 1024 / 1024)
-            vram_used_mb = int(mem.used / 1024 / 1024)
-            vram_free_mb = int(mem.available / 1024 / 1024)
-    except Exception:
-        pass
-
-    # 3. Detect Ollama GPU status
-    ollama_gpu_active = False
-    try:
-        r = requests.get("http://localhost:11434/api/ps", timeout=1)
-        if r.status_code == 200:
-            models = r.json().get("models", [])
-            ollama_gpu_active = len(models) > 0
-    except Exception:
-        pass
-
-    current_mode = os.getenv("HARDWARE_MODE", "auto").lower()
-
-    return {
-        "has_gpu": has_gpu,
-        "gpu_name": gpu_name,
-        "backend_type": backend_type,
-        "torch_device": torch_device,
-        "cuda_version": cuda_version,
-        "vram_total_mb": vram_total_mb,
-        "vram_used_mb": vram_used_mb,
-        "vram_free_mb": vram_free_mb,
-        "gpu_util_percent": gpu_util_percent,
-        "gpu_temp_c": gpu_temp_c,
-        "ollama_gpu_active": ollama_gpu_active,
-        "hardware_mode": current_mode
-    }
+    from backend.modules.hardware import get_hardware_info
+    return get_hardware_info()
 
 
 def get_system_info() -> dict:

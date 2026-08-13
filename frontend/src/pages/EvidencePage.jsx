@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react"
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import {
   Upload, File, FileText,
@@ -26,6 +26,7 @@ import {
 import Badge from "../components/Badge"
 import ConfirmDialog from "../components/ConfirmDialog"
 import PageLayout from "../components/PageLayout"
+import { useTheme } from "../context/ThemeContext"
 import toast from "react-hot-toast"
 import { formatDistanceToNow } from "date-fns"
 import { fromUtc } from '../utils/time'
@@ -302,9 +303,10 @@ function InstructionsPanel() {
 
 // ── Queue Settings Modal ────────────────────────────────────
 function QueueModal({ ev, onClose, onQueue }) {
-  const [analysisMode, setAnalysisMode] = useState('normal')
-  const [cpu, setCpu]         = useState(70)
-  const [ram, setRam]         = useState(2)
+  const { showSystemResources, defaultCpuThrottle, defaultMinRam } = useTheme()
+  const [analysisMode, setAnalysisMode] = useState(showSystemResources ? 'normal' : 'fastest')
+  const [cpu, setCpu]         = useState(defaultCpuThrottle ?? 100)
+  const [ram, setRam]         = useState(defaultMinRam ?? 2)
   const [hwMode, setHwMode]   = useState('auto')
   const [gpuInfo, setGpuInfo] = useState(null)
   const [saving, setSaving]   = useState(false)
@@ -390,91 +392,104 @@ function QueueModal({ ev, onClose, onQueue }) {
 
         <div style={{ padding: '20px 24px' }}>
 
-          {/* Analysis Mode — primary selector */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>Analysis Mode</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {MODES.map(m => {
-                const active = analysisMode === m.id
-                return (
-                  <button
-                    key={m.id}
-                    onClick={() => setAnalysisMode(m.id)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      padding: '12px 14px', borderRadius: 12, cursor: 'pointer',
-                      border: `1.5px solid ${active ? m.border : 'rgba(255,255,255,0.06)'}`,
-                      background: active ? m.bg : 'rgba(255,255,255,0.02)',
-                      transition: 'all 0.15s', textAlign: 'left', width: '100%'
-                    }}
-                  >
-                    <span style={{ fontSize: 22, lineHeight: 1 }}>{m.emoji}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: active ? m.color : '#94a3b8' }}>{m.label}</div>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{m.desc}</div>
-                      {active && <div style={{ fontSize: 10, color: active ? m.color : 'rgba(255,255,255,0.25)', marginTop: 3, opacity: 0.7 }}>{m.detail}</div>}
-                    </div>
-                    <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${active ? m.color : 'rgba(255,255,255,0.15)'}`, background: active ? m.color : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {active && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Hardware Accelerator */}
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Hardware Accelerator</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, background: 'rgba(255,255,255,0.03)', padding: 5, borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
-              {[
-                { id: 'auto', label: '⚡ Auto', desc: 'CPU + GPU parallel' },
-                { id: 'cuda', label: '🚀 GPU Only', desc: 'CUDA / Metal' },
-                { id: 'cpu',  label: '💻 CPU Only', desc: 'Universal' },
-              ].map(m => (
-                <button key={m.id} onClick={() => setHwMode(m.id)}
-                  title={m.desc}
-                  style={{
-                    padding: '8px 4px', borderRadius: 7, cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                    border: 'none', transition: 'all 0.15s',
-                    background: hwMode === m.id ? '#6366f1' : 'transparent',
-                    color: hwMode === m.id ? '#fff' : 'rgba(255,255,255,0.4)',
-                  }}
-                >{m.label}</button>
-              ))}
-            </div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 5 }}>
-              {hwMode === 'auto' ? '⚡ Auto: splits work between GPU + CPU simultaneously' :
-               hwMode === 'cuda' ? `🚀 GPU only${gpuInfo?.gpu_name ? ` — ${gpuInfo.gpu_name}` : ''}` :
-               '💻 CPU only — safe for any device'}
-            </div>
-          </div>
-
-          {/* Advanced Settings — collapsed */}
-          <button
-            onClick={() => setShowAdvanced(v => !v)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.3)', fontSize: 11, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', marginBottom: showAdvanced ? 12 : 0 }}
-          >
-            {showAdvanced ? <ChevronUp size={12} /> : <ChevronDown size={12} />} Advanced Resource Settings
-          </button>
-
-          {showAdvanced && (
-            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>CPU Throttle</span>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: cpu >= 80 ? '#f59e0b' : cpu >= 50 ? '#6366f1' : '#10b981' }}>{cpu}%</span>
+          {showSystemResources ? (
+            <>
+              {/* Analysis Mode — primary selector */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>Analysis Mode</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {MODES.map(m => {
+                    const active = analysisMode === m.id
+                    return (
+                      <button
+                        key={m.id}
+                        onClick={() => setAnalysisMode(m.id)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          padding: '12px 14px', borderRadius: 12, cursor: 'pointer',
+                          border: `1.5px solid ${active ? m.border : 'rgba(255,255,255,0.06)'}`,
+                          background: active ? m.bg : 'rgba(255,255,255,0.02)',
+                          transition: 'all 0.15s', textAlign: 'left', width: '100%'
+                        }}
+                      >
+                        <span style={{ fontSize: 22, lineHeight: 1 }}>{m.emoji}</span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: active ? m.color : '#94a3b8' }}>{m.label}</div>
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{m.desc}</div>
+                          {active && <div style={{ fontSize: 10, color: active ? m.color : 'rgba(255,255,255,0.25)', marginTop: 3, opacity: 0.7 }}>{m.detail}</div>}
+                        </div>
+                        <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${active ? m.color : 'rgba(255,255,255,0.15)'}`, background: active ? m.color : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {active && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
-                <input type="range" min="10" max="100" step="5" value={cpu} onChange={e => setCpu(Number(e.target.value))} style={{ width: '100%', accentColor: '#6366f1' }} />
               </div>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>Min Free RAM</span>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: ram < 1 ? '#ef4444' : ram < 2 ? '#f59e0b' : '#10b981' }}>{ram} GB</span>
+
+              {/* Hardware Accelerator */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Hardware Accelerator</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, background: 'rgba(255,255,255,0.03)', padding: 5, borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
+                  {[
+                    { id: 'auto', label: '⚡ Auto', desc: 'CPU + GPU parallel' },
+                    { id: 'cuda', label: '🚀 GPU Only', desc: 'CUDA / Metal' },
+                    { id: 'cpu',  label: '💻 CPU Only', desc: 'Universal' },
+                  ].map(m => (
+                    <button key={m.id} onClick={() => setHwMode(m.id)}
+                      title={m.desc}
+                      style={{
+                        padding: '8px 4px', borderRadius: 7, cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                        border: 'none', transition: 'all 0.15s',
+                        background: hwMode === m.id ? '#6366f1' : 'transparent',
+                        color: hwMode === m.id ? '#fff' : 'rgba(255,255,255,0.4)',
+                      }}
+                    >{m.label}</button>
+                  ))}
                 </div>
-                <input type="range" min="0" max={maxRam} step="0.5" value={ram} onChange={e => setRam(Number(e.target.value))} style={{ width: '100%', accentColor: '#6366f1' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 5 }}><span>0 GB</span><span>{Math.round(maxRam/2)} GB</span><span>{maxRam} GB</span></div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 5 }}>
+                  {hwMode === 'auto' ? '⚡ Auto: splits work between GPU + CPU simultaneously' :
+                   hwMode === 'cuda' ? `🚀 GPU only${gpuInfo?.gpu_name ? ` — ${gpuInfo.gpu_name}` : ''}` :
+                   '💻 CPU only — safe for any device'}
+                </div>
               </div>
+
+              {/* Advanced Settings — collapsed */}
+              <button
+                onClick={() => setShowAdvanced(v => !v)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.3)', fontSize: 11, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', marginBottom: showAdvanced ? 12 : 0 }}
+              >
+                {showAdvanced ? <ChevronUp size={12} /> : <ChevronDown size={12} />} Advanced Resource Settings
+              </button>
+
+              {showAdvanced && (
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>CPU Throttle</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: cpu >= 80 ? '#f59e0b' : cpu >= 50 ? '#6366f1' : '#10b981' }}>{cpu}%</span>
+                    </div>
+                    <input type="range" min="10" max="100" step="5" value={cpu} onChange={e => setCpu(Number(e.target.value))} style={{ width: '100%', accentColor: '#6366f1' }} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>Min Free RAM</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: ram < 1 ? '#ef4444' : ram < 2 ? '#f59e0b' : '#10b981' }}>{ram} GB</span>
+                    </div>
+                    <input type="range" min="0" max={maxRam} step="0.5" value={ram} onChange={e => setRam(Number(e.target.value))} style={{ width: '100%', accentColor: '#6366f1' }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 5 }}><span>0 GB</span><span>{Math.round(maxRam/2)} GB</span><span>{maxRam} GB</span></div>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <p style={{ fontSize: 13, color: 'var(--color-white-4)', marginBottom: 8 }}>
+                Your evidence is ready for ingestion.
+              </p>
+              <p style={{ fontSize: 11, color: 'var(--color-white-3)' }}>
+                It will be automatically processed using the fastest available engine.
+              </p>
             </div>
           )}
         </div>
@@ -482,9 +497,9 @@ function QueueModal({ ev, onClose, onQueue }) {
         {/* Footer */}
         <div style={{ padding: '0 24px 20px', display: 'flex', gap: 10 }}>
           <button onClick={onClose} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid rgba(255,255,255,0.08)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-          <button onClick={handleQueue} disabled={saving} style={{ flex: 2, padding: '10px 0', borderRadius: 10, border: 'none', background: selectedMode?.color || '#6366f1', color: '#fff', fontSize: 12, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            {saving ? <Loader size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <span>{selectedMode?.emoji}</span>}
-            {saving ? 'Queuing…' : `Queue as ${selectedMode?.label}`}
+          <button onClick={handleQueue} disabled={saving} style={{ flex: 2, padding: '10px 0', borderRadius: 10, border: 'none', background: (showSystemResources ? selectedMode?.color : '#6366f1') || '#6366f1', color: '#fff', fontSize: 12, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            {saving ? <Loader size={13} style={{ animation: 'spin 1s linear infinite' }} /> : (showSystemResources ? <span>{selectedMode?.emoji}</span> : null)}
+            {saving ? (showSystemResources ? 'Queuing…' : 'Starting…') : (showSystemResources ? `Queue as ${selectedMode?.label}` : 'Start Ingestion')}
           </button>
         </div>
       </div>
@@ -619,10 +634,72 @@ function EditSettingsModal({ job, onClose, onSaved }) {
   )
 }
 
+// ── Active Job Card (Live Timing) ────────────────────────────
+function ActiveJobCard({ job, handleStop, stoppingJobs }) {
+  const [liveElapsed, setLiveElapsed] = useState(null)
+  
+  useEffect(() => {
+    if (job.status !== 'Running' || !job.started_at) {
+      setLiveElapsed(null)
+      return
+    }
+    const startMs = new Date(job.started_at + (job.started_at.endsWith('Z') ? '' : 'Z')).getTime()
+    const tick = () => setLiveElapsed(Math.floor((Date.now() - startMs) / 1000))
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [job.status, job.started_at])
+
+  const progress = job.progress_percent ?? job.progress
+  const liveEta = useMemo(() => {
+    if (job.status !== 'Running' || !liveElapsed || !progress || progress <= 0) return null
+    return Math.round((liveElapsed / progress) * (100 - progress))
+  }, [liveElapsed, progress, job.status])
+
+  const displayElapsed = liveElapsed ?? job.elapsed_seconds
+  const displayEta = liveEta ?? job.estimated_seconds
+
+  const fmtSecs = (s) => s == null ? '—' : s > 3600 
+    ? `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m` 
+    : s > 60 ? `${Math.floor(s/60)}m ${s%60}s` : `${s}s`
+
+  return (
+    <div className="bg-surface-1 border border-accent/30 rounded-xl p-3 shadow-[0_0_15px_rgba(var(--accent),0.1)] relative overflow-hidden group">
+      <div className="flex justify-between items-start mb-2 gap-2">
+        <p className="font-semibold text-ink-0 text-sm truncate" title={job.original_filename}>
+          {job.original_filename}
+        </p>
+        <button
+          onClick={() => handleStop(job.id)}
+          disabled={stoppingJobs[job.id]}
+          className="flex items-center gap-1 text-[10px] font-bold bg-danger/10 text-danger hover:bg-danger hover:text-white px-2 py-1 rounded transition-colors shrink-0"
+        >
+          <X size={12} /> Stop
+        </button>
+      </div>
+      <div className="mb-2">
+        <div className="flex justify-between items-end mb-1">
+          <p className="text-[10px] text-ink-2 uppercase font-mono">{job.current_step || 'Processing...'}</p>
+          <p className="text-[10px] text-ink-2 font-mono">
+            {displayElapsed ? `elapsed: ${fmtSecs(displayElapsed)}` : ''}
+            {displayEta ? <span className="ml-2 text-warning">ETA: {fmtSecs(displayEta)}</span> : ''}
+          </p>
+        </div>
+        <ProgressBar percent={job.progress_percent} status="Running" />
+      </div>
+      <div className="flex justify-between items-center text-xs text-ink-2">
+        <span>{job.cpu_throttle_percent}% CPU</span>
+        <span>{(job.min_free_ram_mb / 1024).toFixed(1)}GB RAM</span>
+      </div>
+    </div>
+  )
+}
+
 // ── Main page ─────────────────────────────────────────────
 
 export default function EvidencePage() {
   const { caseId } = useParams()
+  const { showSystemResources } = useTheme()
   const [evidence, setEvidence] = useState([])
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
@@ -882,7 +959,7 @@ export default function EvidencePage() {
         <div className="xl:col-span-8 space-y-8">
           
           {/* 1. System Resources (Top) */}
-          {sysInfo && (
+          {showSystemResources && sysInfo && (
             <div className="bg-surface-2/40 border border-line rounded-xl p-5 shadow-sm flex flex-col justify-center">
               <div className="flex items-center justify-between mb-4">
                  <h2 className="text-sm font-bold text-ink-0 flex items-center gap-2"><Cpu size={16} className="text-accent" /> System Resources</h2>
@@ -1078,28 +1155,12 @@ export default function EvidencePage() {
                 <p className="text-sm text-ink-2 italic bg-surface-1 p-3 rounded-lg border border-line border-dashed">No active jobs</p>
               ) : (
                 running.map(job => (
-                  <div key={job.id} className="bg-surface-1 border border-accent/30 rounded-xl p-3 shadow-[0_0_15px_rgba(var(--accent),0.1)] relative overflow-hidden group">
-                    <div className="flex justify-between items-start mb-2 gap-2">
-                      <p className="font-semibold text-ink-0 text-sm truncate" title={job.original_filename}>
-                        {job.original_filename}
-                      </p>
-                      <button
-                        onClick={() => handleStop(job.id)}
-                        disabled={stoppingJobs[job.id]}
-                        className="flex items-center gap-1 text-[10px] font-bold bg-danger/10 text-danger hover:bg-danger hover:text-white px-2 py-1 rounded transition-colors shrink-0"
-                      >
-                        <X size={12} /> Stop
-                      </button>
-                    </div>
-                    <div className="mb-2">
-                      <p className="text-[10px] text-ink-2 uppercase font-mono mb-1">{job.current_step || 'Processing...'}</p>
-                      <ProgressBar percent={job.progress_percent} status="Running" />
-                    </div>
-                    <div className="flex justify-between items-center text-xs text-ink-2">
-                      <span>{job.cpu_throttle_percent}% CPU</span>
-                      <span>{(job.min_free_ram_mb / 1024).toFixed(1)}GB RAM</span>
-                    </div>
-                  </div>
+                  <ActiveJobCard 
+                    key={job.id} 
+                    job={job} 
+                    handleStop={handleStop} 
+                    stoppingJobs={stoppingJobs} 
+                  />
                 ))
               )}
             </div>

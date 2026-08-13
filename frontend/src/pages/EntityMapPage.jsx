@@ -287,9 +287,9 @@
     useEffect(() => {
       if (!graphRef.current) return
       // Stronger repulsion to spread nodes
-      graphRef.current.d3Force('charge')?.strength(-300)
-      graphRef.current.d3Force('link')?.distance(80)?.strength(0.3)
-      graphRef.current.d3Force('collision')?.radius(20)
+      graphRef.current.d3Force('charge')?.strength(-600)
+      graphRef.current.d3Force('link')?.distance(120)?.strength(0.3)
+      graphRef.current.d3Force('collision')?.radius(25)
     }, [graphRef.current, filteredData.nodes.length])
 
     const loadGraph = async () => {
@@ -476,7 +476,8 @@
     // Draw edge with relationship label
     const linkCanvasObject = useCallback(
       (link, ctx, globalScale) => {
-        const isHighlighted = highlightLinks.size === 0 || highlightLinks.has(link)
+        const isHighlightingActive = highlightNodes.size > 0 || highlightLinks.size > 0
+        const isHighlighted = highlightLinks.has(link)
 
         const src = link.source
         const tgt = link.target
@@ -486,8 +487,9 @@
         ctx.beginPath()
         ctx.moveTo(src.x, src.y)
         ctx.lineTo(tgt.x, tgt.y)
-        ctx.strokeStyle = isHighlighted ? 'rgba(129,140,248,0.6)' : 'var(--color-white-06)'
-        ctx.lineWidth = isHighlighted ? 1.5 : 0.5
+        
+        ctx.strokeStyle = isHighlighted ? 'rgba(129,140,248,0.8)' : (isHighlightingActive ? 'rgba(255,255,255,0.02)' : 'rgba(129,140,248,0.15)')
+        ctx.lineWidth = isHighlighted ? 1.5 : (isHighlightingActive ? 0.2 : 0.4)
         ctx.stroke()
 
         // Relationship label on highlighted edges

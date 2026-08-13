@@ -6,12 +6,10 @@ import json
 import os
 
 try:
-    import torch
-    mode = os.getenv("HARDWARE_MODE", "auto").lower()
-    # spaCy GPU disabled due to CuPy compilation errors with CUDA 13.
-    # CPU is fast enough for single-query entity extraction.
-except Exception:
+    import torch as _torch  # noqa: F401 — imported for optional GPU checks
+except ImportError:
     pass
+
 
 try:
     # en_core_web_sm = 43MB, fast NER, sufficient accuracy for forensics

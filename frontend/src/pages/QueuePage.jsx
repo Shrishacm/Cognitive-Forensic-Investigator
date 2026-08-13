@@ -4,12 +4,13 @@ import {
   Layers, RefreshCw, CheckCircle, XCircle,
   Clock, Trash2, HardDrive, Cpu, FileText
 } from 'lucide-react'
-import { getQueueList, deleteQueueJob, stopQueueJob, addToQueue, getIngestionLogs } from '../api/client'
+import { getQueueList, deleteQueueJob, stopQueueJob, addToQueue, getIngestionLogs, getCases } from '../api/client'
 import PageLayout from '../components/PageLayout'
 import LiveIngestionHardwareMonitor from '../components/LiveIngestionHardwareMonitor'
 import toast from 'react-hot-toast'
 import { fromUtc } from '../utils/time'
 import useWebSocket from '../hooks/useWebSocket'
+import { useTheme } from '../context/ThemeContext'
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -157,7 +158,8 @@ const MODE_BADGE = {
   accurate: { emoji: '🎯', label: 'Accurate', color: '#10b981' },
 }
 
-function JobRow({ job, onRetry, onDelete, onStop, onViewLogs }) {
+function JobRow({ job, onRetry, onDelete, onStop, onViewLogs, casesMap }) {
+  const { showSystemResources } = useTheme()
   const cfg = STATUS_CONFIG[job.status] || STATUS_CONFIG.Queued
   const Icon = cfg.icon
 
@@ -220,18 +222,20 @@ function JobRow({ job, onRetry, onDelete, onStop, onViewLogs }) {
           }}>
             {name}
           </span>
-          <span style={{
-            flexShrink: 0, fontSize: 9, fontWeight: 700, padding: '2px 6px',
-            borderRadius: 5, background: `${modeBadge.color}18`,
-            border: `1px solid ${modeBadge.color}40`, color: modeBadge.color,
-            letterSpacing: '0.04em'
-          }} title={`Analysis Mode: ${modeBadge.label}`}>
-            {modeBadge.emoji} {modeBadge.label}
-          </span>
+          {showSystemResources && (
+            <span style={{
+              flexShrink: 0, fontSize: 9, fontWeight: 700, padding: '2px 6px',
+              borderRadius: 5, background: `${modeBadge.color}18`,
+              border: `1px solid ${modeBadge.color}40`, color: modeBadge.color,
+              letterSpacing: '0.04em'
+            }} title={`Analysis Mode: ${modeBadge.label}`}>
+              {modeBadge.emoji} {modeBadge.label}
+            </span>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 10, paddingLeft: 18 }}>
           <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--text-muted)' }}>
-            {job.case_id?.slice(0, 8)}…
+            {casesMap[job.case_id] ? `${casesMap[job.case_id]} (${job.case_id?.slice(0, 4)}…)` : `${job.case_id?.slice(0, 8)}…`}
           </span>
           {job.current_step && job.status === 'Running' && (
             <span style={{ fontSize: 10, color: 'rgba(99,102,241,0.7)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>
@@ -465,7 +469,9 @@ function StatCard({ label, value, color, active, onClick }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function QueuePage() {
+  const { showSystemResources } = useTheme()
   const [jobs, setJobs] = useState([])
+  const [casesMap, setCasesMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [logCaseId, setLogCaseId] = useState(null)
@@ -473,8 +479,19 @@ export default function QueuePage() {
 
   const load = async () => {
     try {
-      const res = await getQueueList()
-      setJobs(res.data || [])
+      const [qRes, cRes] = await Promise.all([
+        getQueueList(),
+        getCases()
+      ])
+      setJobs(qRes.data || [])
+      
+      const cMap = {}
+      if (cRes.data) {
+        cRes.data.forEach(c => {
+          cMap[c.id] = c.name
+        })
+      }
+      setCasesMap(cMap)
     } catch {
       // silent on poll failure
     } finally {
@@ -568,7 +585,7 @@ export default function QueuePage() {
       }
     >
       {/* Live 1s Refresh Hardware Telemetry Monitor */}
-      <LiveIngestionHardwareMonitor />
+      {showSystemResources && <LiveIngestionHardwareMonitor />}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -683,6 +700,7 @@ export default function QueuePage() {
             <JobRow
               key={job.id}
               job={job}
+              casesMap={casesMap}
               onRetry={handleRetry}
               onDelete={handleDelete}
               onStop={handleStop}

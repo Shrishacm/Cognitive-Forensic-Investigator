@@ -5,6 +5,15 @@ const ThemeContext = createContext();
 export function ThemeProvider({ children }) {
   const [guiTheme, setGuiTheme] = useState(localStorage.getItem('cfi_gui_theme') || 'legacy');
   const [colorMode, setColorMode] = useState(localStorage.getItem('cfi_color_mode') || 'system');
+  const [showSystemResources, setShowSystemResources] = useState(
+    localStorage.getItem('cfi_show_resources') === null ? false : localStorage.getItem('cfi_show_resources') === 'true'
+  );
+  const [defaultCpuThrottle, setDefaultCpuThrottle] = useState(
+    localStorage.getItem('cfi_default_cpu') ? parseInt(localStorage.getItem('cfi_default_cpu')) : 100
+  );
+  const [defaultMinRam, setDefaultMinRam] = useState(
+    localStorage.getItem('cfi_default_ram') ? parseFloat(localStorage.getItem('cfi_default_ram')) : 2
+  );
   const [resolvedMode, setResolvedMode] = useState('dark');
 
   useEffect(() => {
@@ -38,10 +47,29 @@ export function ThemeProvider({ children }) {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [colorMode]);
 
+  useEffect(() => {
+    localStorage.setItem('cfi_show_resources', showSystemResources);
+  }, [showSystemResources]);
+
+  useEffect(() => {
+    localStorage.setItem('cfi_default_cpu', defaultCpuThrottle);
+  }, [defaultCpuThrottle]);
+
+  useEffect(() => {
+    localStorage.setItem('cfi_default_ram', defaultMinRam);
+  }, [defaultMinRam]);
+
   const isModernLight = guiTheme === 'modern' && resolvedMode === 'light';
 
   return (
-    <ThemeContext.Provider value={{ guiTheme, setGuiTheme, colorMode, setColorMode, resolvedMode, isModernLight }}>
+    <ThemeContext.Provider value={{ 
+      guiTheme, setGuiTheme, 
+      colorMode, setColorMode, 
+      resolvedMode, isModernLight, 
+      showSystemResources, setShowSystemResources,
+      defaultCpuThrottle, setDefaultCpuThrottle,
+      defaultMinRam, setDefaultMinRam
+    }}>
       {children}
     </ThemeContext.Provider>
   );

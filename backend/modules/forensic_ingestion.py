@@ -616,22 +616,18 @@ def ingest_raw(image_path: str,
 
 def extract_file_content(
         file_entry: dict,
+        data: bytes,
         temp_dir: str,
         extracted_base_dir: str = None) -> dict:
     """
-    Reads file bytes from disk image entry
-    and extracts text, metadata, GPS coords,
-    Shannon entropy, and optionally saves
+    Extracts text, metadata, GPS coords,
+    Shannon entropy from file bytes, and optionally saves
     the raw file to disk for browser viewing.
     Returns enriched dict.
     """
     try:
         entry = file_entry["entry"]
         size = file_entry["size"]
-
-        # Read file bytes
-        file_obj = entry.as_file()
-        data = file_obj.read_random(0, size)
 
         # Compute artifact hash
         artifact_hash = compute_sha256_bytes(data)

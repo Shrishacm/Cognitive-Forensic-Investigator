@@ -85,7 +85,7 @@ def get_case_logger(case_id: str):
 
 settings = get_settings()
 
-FORENSIC_EXTENSIONS = {'.e01', '.001', '.dd', '.raw', '.img'}
+FORENSIC_EXTENSIONS = {'.e01', '.001', '.e001', '.dd', '.raw', '.img'}
 DOCUMENT_EXTENSIONS = {
     # Documents
     '.pdf', '.txt',
@@ -640,78 +640,93 @@ def _run_forensic_with_progress(evidence, case_id, file_path,
             _update_job_progress(job_id, 20, "Step 3: Walking filesystem")
             print(f"[FORENSIC] Walking filesystem...")
 
-            # Step 3 & 4: Walk and extract
-            for file_info in file_generator:
-                try:
-                    enriched = extract_file_content(
-                        file_info, temp_dir,
-                        extracted_base_dir)
+            import concurrent.futures
+            
+            # Step 3 & 4: Walk and extract using a ThreadPoolExecutor to process files concurrently
+            # To avoid loading the entire disk image contents into memory at once, we process in batches.
+            BATCH_SIZE = 100
+            
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                futures = []
+                
+                def process_batch(futures_list):
+                    nonlocal artifact_count
+                    for f in concurrent.futures.as_completed(futures_list):
+                        try:
+                            enriched = f.result()
+                            if not enriched or not enriched.get("extracted_text"):
+                                continue
 
-                    if not enriched.get("extracted_text"):
+                            # Step 5: Save to ForensicArtifact
+                            artifact = models.ForensicArtifact(
+                                id=str(uuid.uuid4()),
+                                evidence_id=evidence.id,
+                                case_id=case_id,
+                                internal_path=enriched["internal_path"],
+                                filename=enriched["filename"],
+                                file_extension=os.path.splitext(enriched["filename"].lower())[1],
+                                file_size_bytes=enriched["size"],
+                                sha256_hash=enriched["sha256_hash"],
+                                modified_at=enriched["modified"],
+                                accessed_at=enriched["accessed"],
+                                created_at_ts=enriched["created"],
+                                born_at=enriched["born"],
+                                extracted_text=enriched["extracted_text"][:10000],
+                                extraction_type=enriched["extraction_type"],
+                                exif_data="{}",
+                                shannon_entropy=enriched.get("shannon_entropy"),
+                                is_deleted=enriched.get("is_deleted", False),
+                                gps_latitude=enriched.get("gps_latitude"),
+                                gps_longitude=enriched.get("gps_longitude"),
+                                stored_file_path=enriched.get("stored_file_path"),
+                                stored_file_size=enriched.get("stored_file_size", 0),
+                                is_viewable=enriched.get("is_viewable", False)
+                            )
+                            db.add(artifact)
+                            artifact_count += 1
+
+                            # Tag text with internal path for RAG context
+                            tagged_text = (
+                                f"[File: {enriched['internal_path']}"
+                                f" | Modified: {enriched['modified']}]\n"
+                                f"{enriched['extracted_text']}"
+                            )
+                            all_chunk_texts.append(tagged_text)
+                            
+                        except Exception as file_err:
+                            print(f"[FORENSIC] Batch processing error: {file_err}")
+
+                    db.commit()
+                    prog = min(60, 20 + int(artifact_count / 100))
+                    _update_job_progress(job_id, prog, f"Step 3: Extracting files ({artifact_count} so far)")
+                    governor.check_and_throttle()
+                    print(f"[FORENSIC] {artifact_count} artifacts processed")
+
+                for file_info in file_generator:
+                    try:
+                        # Read file bytes in the main thread to ensure pytsk3 thread-safety
+                        file_obj = file_info["entry"].as_file()
+                        file_data = file_obj.read_random(0, file_info["size"])
+                        
+                        future = executor.submit(
+                            extract_file_content,
+                            file_info, file_data, temp_dir, extracted_base_dir
+                        )
+                        futures.append(future)
+
+                        if len(futures) >= BATCH_SIZE:
+                            process_batch(futures)
+                            futures.clear()
+
+                    except Exception as e:
+                        print(f"[FORENSIC] File read error: {e}")
                         continue
+                
+                # Process remaining futures
+                if futures:
+                    process_batch(futures)
+                    futures.clear()
 
-                    # Step 5: Save to ForensicArtifact
-                    artifact = models.ForensicArtifact(
-                        id=str(uuid.uuid4()),
-                        evidence_id=evidence.id,
-                        case_id=case_id,
-                        internal_path=enriched["internal_path"],
-                        filename=enriched["filename"],
-                        file_extension=os.path.splitext(
-                            enriched["filename"].lower())[1],
-                        file_size_bytes=enriched["size"],
-                        sha256_hash=enriched["sha256_hash"],
-                        modified_at=enriched["modified"],
-                        accessed_at=enriched["accessed"],
-                        created_at_ts=enriched["created"],
-                        born_at=enriched["born"],
-                        extracted_text=enriched[
-                            "extracted_text"][:10000],
-                        extraction_type=enriched[
-                            "extraction_type"],
-                        exif_data="{}",
-                        shannon_entropy=enriched.get(
-                            "shannon_entropy"),
-                        is_deleted=enriched.get(
-                            "is_deleted", False),
-                        gps_latitude=enriched.get(
-                            "gps_latitude"),
-                        gps_longitude=enriched.get(
-                            "gps_longitude"),
-                        stored_file_path=enriched.get(
-                            "stored_file_path"),
-                        stored_file_size=enriched.get(
-                            "stored_file_size", 0),
-                        is_viewable=enriched.get(
-                            "is_viewable", False)
-                    )
-                    db.add(artifact)
-                    artifact_count += 1
-
-                    # Tag text with internal path for RAG context
-                    tagged_text = (
-                        f"[File: {enriched['internal_path']}"
-                        f" | Modified: {enriched['modified']}]\n"
-                        f"{enriched['extracted_text']}"
-                    )
-                    all_chunk_texts.append(tagged_text)
-
-                    # Commit every 50 artifacts to avoid
-                    # large in-memory transactions
-                    if artifact_count % 50 == 0:
-                        db.commit()
-                        # Simulate a rough progress for extraction between 20-60%
-                        # It is hard to know total file count upfront, but we update progress.
-                        prog = min(60, 20 + int(artifact_count/100))
-                        _update_job_progress(job_id, prog, f"Step 3: Extracting files ({artifact_count} so far)")
-                        governor.check_and_throttle()
-                        print(f"[FORENSIC] {artifact_count} artifacts processed")
-
-                except Exception as e:
-                    print(f"[FORENSIC] File error: {e}")
-                    continue
-
-            db.commit()
             print(f"[FORENSIC] {artifact_count} artifacts extracted")
 
             # Run anomaly detection on all artifacts

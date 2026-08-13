@@ -115,20 +115,31 @@ IMAGE_EXTENSIONS = {
 MAX_AUDIO_DURATION_SECONDS = 1800
 
 
-# ── Whisper model (lazy load) ─────────────
+# ── Whisper model (lazy load, hot-reload on device change) ────────────────
+
+_WHISPER_MODEL = None
+_whisper_device: str = ""   # which device the loaded Whisper model is on
+
 
 def _get_whisper_model():
     """
-    Loads the Whisper 'tiny' model on first use on CUDA GPU or CPU.
+    Lazy-loads the Whisper 'tiny' model on first use.
+    Uses hardware.py to detect the best available device (CUDA, MPS, CPU).
+    Hot-reloads if HARDWARE_MODE changes between calls.
     """
-    global _WHISPER_MODEL
-    if _WHISPER_MODEL is None:
-        import torch
-        mode = os.getenv("HARDWARE_MODE", "auto").lower()
-        device = "cuda" if (mode != "cpu" and torch.cuda.is_available()) else "cpu"
-        print(f"[MEDIA] Loading Whisper tiny model on device: {device.upper()}…")
-        _WHISPER_MODEL = whisper.load_model("tiny", device=device)
-        print(f"[MEDIA] Whisper model loaded on {device.upper()}")
+    global _WHISPER_MODEL, _whisper_device
+    from backend.modules.hardware import detect_device
+    wanted = detect_device()
+
+    if _WHISPER_MODEL is None or _whisper_device != wanted:
+        if _WHISPER_MODEL is not None:
+            print(f"[MEDIA] Whisper device change ({_whisper_device} → {wanted}). Reloading…")
+            _WHISPER_MODEL = None
+        print(f"[MEDIA] Loading Whisper tiny model on {wanted.upper()}…")
+        _WHISPER_MODEL = whisper.load_model("tiny", device=wanted)
+        _whisper_device = wanted
+        print(f"[MEDIA] Whisper ready on {wanted.upper()}")
+
     return _WHISPER_MODEL
 
 

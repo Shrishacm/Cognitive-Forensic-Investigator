@@ -64,10 +64,13 @@ function AccountTab({ user }) {
 }
 
 function PreferencesTab() {
-  const { guiTheme, setGuiTheme, colorMode, setColorMode } = useTheme()
+  const { guiTheme, setGuiTheme, colorMode, setColorMode, showSystemResources, setShowSystemResources, defaultCpuThrottle, setDefaultCpuThrottle, defaultMinRam, setDefaultMinRam } = useTheme()
   const [prefs, setPrefs] = useState({ timezone: 'UTC' })
   const [localGuiTheme, setLocalGuiTheme] = useState(guiTheme)
   const [localColorMode, setLocalColorMode] = useState(colorMode)
+  const [localShowSystemResources, setLocalShowSystemResources] = useState(showSystemResources)
+  const [localDefaultCpu, setLocalDefaultCpu] = useState(defaultCpuThrottle)
+  const [localDefaultRam, setLocalDefaultRam] = useState(defaultMinRam)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -94,6 +97,9 @@ function PreferencesTab() {
       await updatePreferences({ timezone: prefs.timezone })
       setGuiTheme(localGuiTheme)
       setColorMode(localColorMode)
+      setShowSystemResources(localShowSystemResources)
+      setDefaultCpuThrottle(localDefaultCpu)
+      setDefaultMinRam(localDefaultRam)
       toast.success('Preferences saved')
     } catch {
       toast.error('Failed to save preferences')
@@ -151,6 +157,56 @@ function PreferencesTab() {
             <option value="UTC">UTC (Recommended for Forensics)</option>
             <option value="Local">Local Time</option>
           </select>
+        </div>
+        <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <label style={{ fontSize: 11, color: 'var(--color-white-3)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 2 }}>
+              System Resource Info
+            </label>
+            <span style={{ fontSize: 11, color: 'var(--color-white-5)' }}>Show detailed hardware and telemetry metrics across the app.</span>
+          </div>
+          <label style={{
+            position: 'relative', display: 'inline-block', width: 36, height: 20
+          }}>
+            <input 
+              type="checkbox" 
+              checked={localShowSystemResources} 
+              onChange={e => setLocalShowSystemResources(e.target.checked)}
+              style={{ opacity: 0, width: 0, height: 0 }}
+            />
+            <span style={{
+              position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: localShowSystemResources ? '#4f46e5' : 'var(--color-white-05)',
+              transition: '.4s', borderRadius: 20,
+              border: '1px solid rgba(255,255,255,0.1)'
+            }}>
+              <span style={{
+                position: 'absolute', content: '""', height: 14, width: 14, left: 2, bottom: 2,
+                backgroundColor: 'white', transition: '.4s', borderRadius: '50%',
+                transform: localShowSystemResources ? 'translateX(16px)' : 'none'
+              }} />
+            </span>
+          </label>
+        </div>
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+            <label style={{ fontSize: 11, color: 'var(--color-white-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Default CPU Throttle
+            </label>
+            <span style={{ fontSize: 12, fontWeight: 800, color: localDefaultCpu >= 80 ? '#f59e0b' : localDefaultCpu >= 50 ? '#6366f1' : '#10b981' }}>{localDefaultCpu}%</span>
+          </div>
+          <input type="range" min="10" max="100" step="5" value={localDefaultCpu} onChange={e => setLocalDefaultCpu(Number(e.target.value))} style={{ width: '100%', accentColor: '#6366f1' }} />
+          <div style={{ fontSize: 11, color: 'var(--color-white-5)', marginTop: 4 }}>Determines how much CPU is used during evidence ingestion.</div>
+        </div>
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+            <label style={{ fontSize: 11, color: 'var(--color-white-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Default Min Free RAM
+            </label>
+            <span style={{ fontSize: 12, fontWeight: 800, color: localDefaultRam < 1 ? '#ef4444' : localDefaultRam < 2 ? '#f59e0b' : '#10b981' }}>{localDefaultRam} GB</span>
+          </div>
+          <input type="range" min="0" max="16" step="0.5" value={localDefaultRam} onChange={e => setLocalDefaultRam(Number(e.target.value))} style={{ width: '100%', accentColor: '#6366f1' }} />
+          <div style={{ fontSize: 11, color: 'var(--color-white-5)', marginTop: 4 }}>Amount of RAM left free for the OS. Lower values use more RAM for ingestion.</div>
         </div>
         <button
           onClick={handleSave}
@@ -455,6 +511,7 @@ function SecurityTab({ user, navigate }) {
 
 export default function SettingsPage() {
   const { user } = useAuth()
+  const { showSystemResources } = useTheme()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') || 'account'
@@ -462,7 +519,7 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'account', label: 'Account', icon: User },
     { id: 'preferences', label: 'Preferences', icon: Settings2 },
-    { id: 'hardware', label: 'Hardware & Compute', icon: Cpu },
+    ...(showSystemResources ? [{ id: 'hardware', label: 'Hardware & Compute', icon: Cpu }] : []),
     { id: 'integrations', label: 'API Integrations', icon: LinkIcon },
     { id: 'security', label: 'Security', icon: Shield },
   ]

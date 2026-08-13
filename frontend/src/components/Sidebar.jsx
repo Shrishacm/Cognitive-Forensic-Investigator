@@ -138,7 +138,7 @@ export default function Sidebar({ activeCaseId, setActiveCaseId, status, collaps
   const navigate = useNavigate()
   const location = useLocation()
   const { user, signOut, isAdmin } = useAuth()
-  const { guiTheme } = useTheme()
+  const { guiTheme, showSystemResources } = useTheme()
   const [cases, setCases] = useState([])
   const [expanded, setExpanded] = useState(activeCaseId)
   const [search, setSearch] = useState('')
@@ -299,7 +299,7 @@ export default function Sidebar({ activeCaseId, setActiveCaseId, status, collaps
       )}
       <div style={{ padding: collapsed ? '6px 6px 2px' : '2px 8px 4px', flexShrink: 0 }}>
         {NAV_TOP.map(item => (
-          <NavItem key={item.path} {...item} active={isActive(item.path)} onClick={() => navigate(item.path)} collapsed={collapsed} />
+          (item.path !== '/health' || showSystemResources) && <NavItem key={item.path} {...item} active={isActive(item.path)} onClick={() => navigate(item.path)} collapsed={collapsed} />
         ))}
         {isAdmin && (
           <NavItem icon={Users} label="Users" path="/admin/users" active={isActive('/admin/users')} onClick={() => navigate('/admin/users')} collapsed={collapsed} />
@@ -465,7 +465,7 @@ export default function Sidebar({ activeCaseId, setActiveCaseId, status, collaps
       </div>
 
       {/* System status */}
-      {!collapsed && (
+      {!collapsed && showSystemResources && (
         <div style={{
           padding: '8px 12px',
           borderTop: '1px solid rgba(42, 110, 166, 0.15)',
@@ -487,7 +487,7 @@ export default function Sidebar({ activeCaseId, setActiveCaseId, status, collaps
       )}
 
       {/* Collapsed status dots */}
-      {collapsed && (
+      {collapsed && showSystemResources && (
         <div style={{ padding: '6px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, borderTop: '1px solid rgba(42, 110, 166, 0.15)' }}>
           <span title={`Database: ${dbOk ? 'Connected' : 'Error'}`} style={{ width: 5, height: 5, borderRadius: '50%', background: dbOk ? '#1A7A4A' : '#C53030' }} />
           <span title={`AI: ${ollamaOk ? 'Running' : 'Offline'}`} style={{ width: 5, height: 5, borderRadius: '50%', background: ollamaOk ? '#1A7A4A' : '#C53030' }} />
