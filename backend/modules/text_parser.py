@@ -16,11 +16,11 @@ def extract_text(file_path: str) -> str:
                       errors="ignore") as f:
                 text = f.read()
 
-        # Clean excessive whitespace
-        lines = [line.strip()
-                 for line in text.splitlines()
-                 if line.strip()]
-        return "\n".join(lines)
+        # Clean excessive whitespace using fast regex
+        text = re.sub(r'[ \t]+', ' ', text)
+        text = re.sub(r'\r\n|\r', '\n', text)
+        text = re.sub(r'\n\s*\n', '\n', text)
+        return text.strip()
 
     except Exception as e:
         print(f"TEXT EXTRACTION ERROR: {e}")
@@ -28,8 +28,8 @@ def extract_text(file_path: str) -> str:
 
 
 def chunk_text(text: str,
-               chunk_size: int = 500,
-               overlap: int = 50) -> list[str]:
+               chunk_size: int = 1500,
+               overlap: int = 150) -> list[str]:
     """
     Splits text into overlapping chunks.
     """

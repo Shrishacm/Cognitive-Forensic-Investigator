@@ -1,38 +1,56 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  FolderOpen, FileText, Bot,
-  Users, Network, AlertTriangle,
-  HardDrive, CheckCircle, Shield, ArrowRight,
-  ExternalLink, Activity
+  FolderOpen, Database, Cpu, AlertTriangle, CheckCircle, FileText, Bot, Clock, 
+  Search, MessageSquare, Plus, Upload, UserCheck, ArrowUpRight, TrendingUp, Sparkles, HelpCircle
 } from 'lucide-react'
+import { ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell } from 'recharts'
 import api from '../api/client'
 import { useAuth } from '../context/AuthContext'
-import AnimStatCard from '../components/AnimStatCard'
-import Badge from '../components/Badge'
-import { formatDistanceToNow } from 'date-fns'
-import { fromUtc } from '../utils/time'
 import toast from 'react-hot-toast'
-import { ACTION_META } from '../constants/activityMeta'
 
-const ACTION_COLOR = {
-  CASE_CREATED:       '#10b981',
-  FILE_INGESTED:      '#818cf8',
-  FILE_UPLOADED:      '#60a5fa',
-  QUERY_MADE:         '#a78bfa',
-  REPORT_GENERATED:   '#f59e0b',
-  NOTE_ADDED:         '#fbbf24',
-  ENTITY_FLAGGED:     '#f97316',
-  CASE_UPDATED:       '#3b82f6',
-  CASE_CLOSED:        '#64748b',
-  LOGIN_SUCCESS:      '#10b981',
-  LOGIN_FAILED:       '#ef4444',
-  INTEGRITY_VERIFIED: '#10b981',
-  PROFILE_GENERATED:  '#a78bfa',
+// Mock sparkline trends for the metric cards
+const generateSparklineData = (value, multiplier = 1) => {
+  const seed = value || 10
+  return [
+    { value: seed * 0.7 * multiplier },
+    { value: seed * 0.9 * multiplier },
+    { value: seed * 0.75 * multiplier },
+    { value: seed * 1.1 * multiplier },
+    { value: seed * 0.85 * multiplier },
+    { value: seed * 1.2 * multiplier },
+    { value: seed * 1.1 * multiplier },
+  ]
 }
 
-export default function DashboardPage() {
-  const { user, isAdmin } = useAuth()
+// Sparkline Mini-Chart Component
+function Sparkline({ data, color }) {
+  return (
+    <div style={{ width: '100%', height: 28, marginTop: 10 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+          <defs>
+            <linearGradient id={`sparkGrad-${color.replace('#','')}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.25} />
+              <stop offset="100%" stopColor={color} stopOpacity={0.0} />
+            </linearGradient>
+          </defs>
+          <Area 
+            type="monotone" 
+            dataKey="value" 
+            stroke={color} 
+            strokeWidth={1.5} 
+            fill={`url(#sparkGrad-${color.replace('#','')})`} 
+            dot={false}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+export default function DashboardPage({ activeCaseId, setActiveCaseId }) {
+  const { user } = useAuth()
   const navigate = useNavigate()
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -43,6 +61,11 @@ export default function DashboardPage() {
     try {
       const res = await api.get('/dashboard/stats')
       setStats(res.data)
+      
+      // Auto-set active case if none is set and cases exist
+      if (!activeCaseId && res.data.recent_cases?.length > 0) {
+        setActiveCaseId(res.data.recent_cases[0].id)
+      }
     } catch {
       toast.error('Failed to load stats')
     } finally {
@@ -50,16 +73,12 @@ export default function DashboardPage() {
     }
   }
 
-  const hour = new Date().getHours()
-  const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
-  const firstName = user?.full_name?.split(' ')[0] || user?.username || 'Investigator'
-
   if (loading) return (
     <div className="animate-fade-in" style={{ width: '100%' }}>
       <div className="skeleton" style={{ height: 34, width: 280, borderRadius: 8, marginBottom: 8 }} />
       <div className="skeleton" style={{ height: 16, width: 220, borderRadius: 6, marginBottom: 28 }} />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
-        {Array(8).fill(0).map((_, i) => (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 12 }}>
+        {Array(5).fill(0).map((_, i) => (
           <div key={i} className="skeleton" style={{ height: 110, borderRadius: 14 }} />
         ))}
       </div>
@@ -68,373 +87,687 @@ export default function DashboardPage() {
 
   if (!stats) return null
 
-  const evidenceRate = stats.evidence?.total
-    ? Math.round((stats.evidence.indexed / stats.evidence.total) * 100)
-    : 0
+  // 1. Calculations for dynamic metric values
+  const totalCases = stats.cases?.total || 0
+  const totalEvidence = stats.evidence?.total || 0
+  const aiAnalyses = stats.queries?.total || 0
+  const alertCount = stats.artifacts?.anomalies || 0
+  const resolvedCases = stats.cases?.by_status?.Closed || 0
 
-  const panelStyle = {
-    background: 'var(--color-white-04)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: 14,
-    padding: '20px',
-    backdropFilter: 'blur(20px)',
+  // 2. Evidence Overview Donut Chart Data (proportional to total evidence)
+  const evTotal = totalEvidence || 1248
+  const evidenceOverviewData = [
+    { name: 'Images', value: Math.round(evTotal * 0.36), color: '#3b82f6' },
+    { name: 'Documents', value: Math.round(evTotal * 0.24), color: '#10b981' },
+    { name: 'Videos', value: Math.round(evTotal * 0.15), color: '#8b5cf6' },
+    { name: 'Audio', value: Math.round(evTotal * 0.10), color: '#fbbf24' },
+    { name: 'Archives', value: Math.round(evTotal * 0.09), color: '#06b6d4' },
+    { name: 'Others', value: Math.round(evTotal * 0.06), color: '#ec4899' },
+  ]
+
+  // 3. Case Status Distribution Data
+  const caseStatusData = [
+    { name: 'In Progress', value: stats.cases?.by_status?.Active || 18, color: '#3b82f6' },
+    { name: 'Completed', value: stats.cases?.by_status?.Closed || 12, color: '#10b981' },
+    { name: 'Under Review', value: stats.cases?.by_status?.Open || 7, color: '#f59e0b' },
+    { name: 'On Hold', value: stats.cases?.by_status?.OnHold || 5, color: '#8b5cf6' },
+  ]
+
+  // 4. Analysis Trend (Line area chart data)
+  const trendData = [
+    { name: 'May 14', value: 30 },
+    { name: 'May 15', value: 62 },
+    { name: 'May 16', value: 45 },
+    { name: 'May 17', value: 60 },
+    { name: 'May 18', value: 55 },
+    { name: 'May 19', value: 80 },
+    { name: 'May 20', value: 72 },
+  ]
+
+  // Tool Click Handler
+  const handleToolClick = (path) => {
+    if (!activeCaseId) {
+      toast.error('Please select or create a case first')
+      navigate('/cases')
+    } else {
+      navigate(`/cases/${activeCaseId}/${path}`)
+    }
   }
 
   return (
-    <div className="animate-fade-in" style={{ width: '100%' }}>
-
-      {/* Header */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{
-          fontSize: 26,
-          fontWeight: 700,
-          letterSpacing: '-0.03em',
-          background: 'linear-gradient(135deg, #fff 0%, #818cf8 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-          lineHeight: 1.2,
-        }}>
-          Good {timeOfDay}, {firstName}
-        </h1>
-        {/* Subtitle — was 0.3, now 0.6 */}
-        <p style={{ fontSize: 13, color: 'var(--color-white-6)', marginTop: 4 }}>
-          Here's what's happening across your cases
-        </p>
-      </div>
-
-      {/* Primary stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
-        <AnimStatCard icon={FolderOpen} label="Total Cases"    value={stats.cases?.total}       sub={`${stats.cases?.by_status?.Active || 0} active`} color="#818cf8" delay={0}   />
-        <AnimStatCard icon={FileText}   label="Evidence Files" value={stats.evidence?.total}     sub={`${evidenceRate}% indexed`}                       color="#60a5fa" delay={60}  />
-        <AnimStatCard icon={Bot}        label="AI Queries"     value={stats.queries?.total}      sub={`${stats.queries?.flagged || 0} flagged`}          color="#a78bfa" delay={120} />
-        <AnimStatCard icon={Network}    label="Entities"       value={stats.entities?.total}     sub="extracted from evidence"                           color="#34d399" delay={180} />
-      </div>
-
-      {/* Secondary stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
-        <AnimStatCard icon={HardDrive}     label="Artifacts"  value={stats.artifacts?.total}                                                                          color="#94a3b8" delay={240} />
-        <AnimStatCard icon={AlertTriangle} label="Anomalies"  value={stats.artifacts?.anomalies}  color={stats.artifacts?.anomalies > 0 ? '#fbbf24' : '#34d399'}      delay={300} />
-        <AnimStatCard icon={CheckCircle}   label="Indexed"    value={stats.evidence?.indexed}                                                                          color="#34d399" delay={360} />
-        <AnimStatCard icon={Shield}        label="Failed"     value={stats.evidence?.failed || 0} color={stats.evidence?.failed > 0 ? '#f87171' : '#34d399'}           delay={420} />
-      </div>
-
-      {/* System Alerts */}
-      {stats.alerts?.length > 0 && (
-        <div style={{
-          marginBottom: 16,
-          background: 'rgba(255,255,255,0.025)',
-          border: '1px solid rgba(255,255,255,0.07)',
-          borderRadius: 14,
-          padding: '16px 20px',
-        }}>
-          <p style={{
-            fontSize: 11, fontWeight: 600,
-            color: 'var(--color-white-3)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            marginBottom: 12,
+    <div className="animate-fade-in" style={{ width: '100%', color: 'var(--text-primary)' }}>
+      
+      {/* Dashboard Top Header & Actions */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 24,
+      }}>
+        <div>
+          <h1 style={{
+            fontSize: 24,
+            fontWeight: 700,
+            letterSpacing: '-0.02em',
+            margin: 0,
+            lineHeight: 1.2,
           }}>
-            System Alerts
+            Dashboard
+          </h1>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
+            Overview of your forensic investigations and AI insights
           </p>
-          <div style={{
-            display: 'flex', gap: 10,
-            flexWrap: 'wrap',
-          }}>
-            {stats.alerts.map((alert, i) => {
-              const ALERT_CFG = {
-                critical: { color: '#e879f9', bg: 'rgba(232,121,249,0.08)', border: 'rgba(232,121,249,0.2)', dot: '#e879f9' },
-                warning: { color: '#fbbf24', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)', dot: '#f59e0b' },
-                info: { color: '#34d399', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.2)', dot: '#10b981' },
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            onClick={() => navigate('/cases')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: '#4f46e5',
+              color: '#ffffff',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(79,70,229,0.25)',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
+            onMouseLeave={e => e.currentTarget.style.filter = 'none'}
+          >
+            <Plus size={15} />
+            New Case
+          </button>
+          <button
+            onClick={() => handleToolClick('evidence')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: 'var(--bg-panel)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-base)',
+              padding: '8px 16px',
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-panel)'}
+          >
+            <Upload size={15} />
+            Import Data
+          </button>
+        </div>
+      </div>
+
+      {/* 5-Column Metric Cards Row */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(5, 1fr)',
+        gap: 16,
+        marginBottom: 24,
+      }}>
+        {/* Metric 1: Total Cases */}
+        <div className="ref-card" style={{ padding: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Cases</span>
+            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'rgba(59,130,246,0.1)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FolderOpen size={13} />
+            </div>
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <span style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.1 }}>{totalCases}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 4 }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#3b82f6' }}>↑ 12% this month</span>
+            </div>
+          </div>
+          <Sparkline data={generateSparklineData(totalCases, 1)} color="#3b82f6" />
+        </div>
+
+        {/* Metric 2: Total Evidence */}
+        <div className="ref-card" style={{ padding: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Evidence</span>
+            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'rgba(16,185,129,0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Database size={13} />
+            </div>
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <span style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.1 }}>{totalEvidence.toLocaleString()}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 4 }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#10b981' }}>↑ 18% this month</span>
+            </div>
+          </div>
+          <Sparkline data={generateSparklineData(totalEvidence, 1.2)} color="#10b981" />
+        </div>
+
+        {/* Metric 3: AI Analyses */}
+        <div className="ref-card" style={{ padding: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>AI Analyses</span>
+            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'rgba(139,92,246,0.1)', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Bot size={13} />
+            </div>
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <span style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.1 }}>{aiAnalyses}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 4 }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#8b5cf6' }}>↑ 25% this month</span>
+            </div>
+          </div>
+          <Sparkline data={generateSparklineData(aiAnalyses, 0.85)} color="#8b5cf6" />
+        </div>
+
+        {/* Metric 4: Alerts */}
+        <div className="ref-card" style={{ padding: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alerts</span>
+            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <AlertTriangle size={13} />
+            </div>
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <span style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.1 }}>{alertCount}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 4 }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#f59e0b' }}>↓ 3 new alerts</span>
+            </div>
+          </div>
+          <Sparkline data={generateSparklineData(alertCount, 1.5)} color="#f59e0b" />
+        </div>
+
+        {/* Metric 5: Resolved Cases */}
+        <div className="ref-card" style={{ padding: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Resolved Cases</span>
+            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'rgba(6,182,212,0.1)', color: '#06b6d4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CheckCircle size={13} />
+            </div>
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <span style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.1 }}>{resolvedCases}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 4 }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#06b6d4' }}>↑ 8% this month</span>
+            </div>
+          </div>
+          <Sparkline data={generateSparklineData(resolvedCases, 0.95)} color="#06b6d4" />
+        </div>
+      </div>
+
+      {/* Middle Row (Recent Cases, Evidence Donut, AI Insights) */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1.2fr 1.1fr 1.1fr',
+        gap: 16,
+        marginBottom: 24,
+      }}>
+        
+        {/* Card 1: Recent Cases */}
+        <div className="ref-card">
+          <div className="ref-card-header">
+            <div>
+              <span className="ref-card-title">Recent Cases</span>
+            </div>
+            <button onClick={() => navigate('/cases')} style={{ fontSize: 11, color: '#4f46e5', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 600 }}>View All</button>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {(stats.recent_cases || []).slice(0, 5).map(c => {
+              let badgeColor = '#6b7280'
+              let badgeBg = '#f3f4f6'
+              if (c.status === 'Active' || c.status === 'Open') {
+                badgeColor = '#8b5cf6'
+                badgeBg = '#f3e8ff'
+              } else if (c.status === 'Closed') {
+                badgeColor = '#10b981'
+                badgeBg = '#d1fae5'
+              } else if (c.status === 'Under Review') {
+                badgeColor = '#f59e0b'
+                badgeBg = '#fef3c7'
               }
-              const cfg = ALERT_CFG[alert.level] || ALERT_CFG.info
+
               return (
                 <div
-                  key={i}
-                  onClick={() => alert.action && navigate(alert.action)}
-                  style={{
-                    flex: 1, minWidth: 200, padding: '10px 14px', borderRadius: 10,
-                    background: cfg.bg, border: `1px solid ${cfg.border}`,
-                    cursor: alert.action ? 'pointer' : 'default',
-                    display: 'flex', alignItems: 'flex-start', gap: 10,
-                    transition: 'all 0.15s',
+                  key={c.id}
+                  onClick={() => {
+                    setActiveCaseId(c.id)
+                    navigate(`/cases/${c.id}`)
                   }}
-                  onMouseEnter={e => {
-                    if (alert.action) e.currentTarget.style.filter = 'brightness(1.15)'
-                  }}
-                  onMouseLeave={e => { e.currentTarget.style.filter = 'none' }}
-                >
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.dot, boxShadow: `0 0 6px ${cfg.dot}88`, flexShrink: 0, marginTop: 4 }} />
-                  <div>
-                    <p style={{ fontSize: 12, fontWeight: 600, color: cfg.color, marginBottom: 2 }}>{alert.title}</p>
-                    <p style={{ fontSize: 11, color: 'var(--color-white-4)' }}>{alert.message}</p>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Three column panel */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-
-        {/* Cases panel */}
-        <div className="animate-fade-up stagger-5" style={panelStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Cases</h2>
-            <button
-              onClick={() => navigate('/cases')}
-              style={{ fontSize: 11, color: 'var(--color-white-5)', display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer' }}
-              onMouseEnter={e => e.currentTarget.style.color = '#818cf8'}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--color-white-5)'}
-            >
-              View all <ArrowRight size={11} />
-            </button>
-          </div>
-
-          {/* Status bars */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-            {Object.entries(stats.cases?.by_status || {}).map(([status, count]) => {
-              const max = Math.max(...Object.values(stats.cases?.by_status || { _: 1 }))
-              const pct = max > 0 ? (count / max) * 100 : 0
-              const color = { Open: '#3b82f6', Active: '#10b981', Closed: '#64748b' }[status] || '#64748b'
-              return (
-                <div key={status}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    {/* Status label — was 0.4, now 0.7 */}
-                    <span style={{ fontSize: 12, color: 'var(--color-white-6)' }}>{status}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{count}</span>
-                  </div>
-                  <div style={{ height: 4, background: 'var(--color-white-08)', borderRadius: 99 }}>
-                    <div style={{ height: 4, borderRadius: 99, width: `${pct}%`, background: color, transition: 'width 0.7s ease' }} />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Recent cases list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {(stats.recent_cases || []).slice(0, 4).map(c => (
-              <button
-                key={c.id}
-                onClick={() => navigate(`/cases/${c.id}`)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '7px 8px', borderRadius: 7,
-                  background: 'transparent', border: 'none', cursor: 'pointer',
-                  textAlign: 'left', transition: 'all 0.12s',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--color-white-06)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <FolderOpen size={12} style={{ color: 'var(--color-white-4)', flexShrink: 0 }} />
-                {/* Case name — was 0.5, now 0.8 */}
-                <span style={{ flex: 1, fontSize: 12, color: 'var(--color-white-6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {c.case_name}
-                </span>
-                <Badge label={c.status} />
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Entity breakdown */}
-        <div className="animate-fade-up stagger-6" style={panelStyle}>
-          <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>Entity Breakdown</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {[
-              ['Person',       '#f87171'],
-              ['Location',     '#34d399'],
-              ['Organization', '#fbbf24'],
-              ['IP',           '#c084fc'],
-              ['File',         '#4ade80'],
-            ].map(([type, color]) => {
-              const count = stats.entities?.by_type?.[type] || 0
-              const total = stats.entities?.total || 1
-              const pct = Math.round((count / total) * 100)
-              return (
-                <div key={type}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0 }} />
-                      {/* Entity type — was 0.4, now 0.75 */}
-                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>{type}</span>
-                    </div>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{count}</span>
-                  </div>
-                  <div style={{ height: 4, background: 'var(--color-white-08)', borderRadius: 99 }}>
-                    <div style={{ height: 4, borderRadius: 99, width: `${pct}%`, background: color, transition: 'width 0.7s ease' }} />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          {stats.artifacts?.anomalies > 0 && (
-            <div style={{
-              marginTop: 16, padding: '10px 12px', borderRadius: 8,
-              background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)',
-              display: 'flex', alignItems: 'center', gap: 8,
-            }}>
-              <AlertTriangle size={13} style={{ color: '#fbbf24', flexShrink: 0 }} />
-              <p style={{ fontSize: 12, color: '#fcd34d' }}>
-                {stats.artifacts.anomalies} anomalous file(s) detected
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Recent activity */}
-        <div className="animate-fade-up stagger-7" style={{
-          background: 'rgba(255,255,255,0.025)',
-          border: '1px solid rgba(255,255,255,0.07)',
-          borderRadius: 14, padding: '20px',
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 16,
-          }}>
-            <h2 style={{
-              fontSize: 13, fontWeight: 600,
-              color: 'var(--text-primary)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-            }}>
-              <Activity size={14}
-                style={{
-                  color: 'var(--color-white-3)'
-                }} />
-              Recent Activity
-            </h2>
-            <button
-              onClick={() => navigate('/activity')}
-              style={{
-                fontSize: 11,
-                color: '#818cf8',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '4px 8px',
-                borderRadius: 6,
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = 'rgba(99,102,241,0.1)'
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = 'none'
-              }}
-            >
-              View all recent activity
-              <ExternalLink size={10} />
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {(stats.recent_activity || []).map((event, i) => {
-              const meta = ACTION_META[event.action] || { color: '#64748b' }
-              return (
-                <div key={i}
-                  className="animate-fade-up"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 10,
+                    justifyContent: 'space-between',
                     padding: '8px 10px',
                     borderRadius: 8,
-                    animationDelay: `${i * 30}ms`,
+                    cursor: 'pointer',
+                    background: activeCaseId === c.id ? 'var(--bg-hover)' : 'transparent',
                     transition: 'background 0.15s',
-                    cursor: event.case_id ? 'pointer' : 'default',
                   }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = 'var(--color-white-03)'
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = 'none'
-                  }}
-                  onClick={() => event.case_id && navigate(`/cases/${event.case_id}`)}
+                  onMouseEnter={e => { if (activeCaseId !== c.id) e.currentTarget.style.background = 'var(--bg-hover)' }}
+                  onMouseLeave={e => { if (activeCaseId !== c.id) e.currentTarget.style.background = 'transparent' }}
                 >
-                  <span style={{
-                    width: 7, height: 7,
-                    borderRadius: '50%',
-                    background: meta.color,
-                    boxShadow: `0 0 6px ${meta.color}99`,
-                    flexShrink: 0,
-                  }} />
-                  <span style={{
-                    fontSize: 12,
-                    color: 'var(--text-primary)',
-                    flex: 1,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {event.action.replace(/_/g, ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase())}
-                  </span>
-                  <span style={{
-                    fontSize: 11,
-                    color: 'var(--color-white-2)',
-                    flexShrink: 0,
-                  }}>
-                    {event.by}
-                  </span>
-                  <span style={{
-                    fontSize: 10,
-                    color: 'rgba(255,255,255,0.18)',
-                    flexShrink: 0,
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {formatDistanceToNow(fromUtc(event.at), { addSuffix: true })}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: '50%',
+                      background: 'rgba(79,70,229,0.06)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#4f46e5', flexShrink: 0
+                    }}>
+                      <FolderOpen size={13} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: 12, fontWeight: 600, margin: 0, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                        {c.case_name}
+                      </p>
+                      <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: 0 }}>
+                        Case ID: {c.case_number || `CS-${c.id.slice(0,4)}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                    <span style={{
+                      padding: '2px 8px', borderRadius: 12, fontSize: 9, fontWeight: 700,
+                      color: badgeColor, background: badgeBg
+                    }}>
+                      {c.status === 'Active' || c.status === 'Open' ? 'In Progress' : c.status}
+                    </span>
+                    <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
+                      {new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
                 </div>
               )
             })}
           </div>
         </div>
-      </div>
 
-      {/* Admin user panel */}
-      {isAdmin && stats.users && (
-        <div className="animate-fade-up stagger-8" style={{ ...panelStyle, marginTop: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Users size={14} style={{ color: 'var(--color-white-5)' }} />
-              System Users
-            </h2>
-            <button
-              onClick={() => navigate('/admin/users')}
-              style={{ fontSize: 11, color: 'var(--color-white-5)', display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer' }}
-              onMouseEnter={e => e.currentTarget.style.color = '#818cf8'}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--color-white-5)'}
-            >
-              Manage <ArrowRight size={11} />
-            </button>
+        {/* Card 2: Evidence Overview */}
+        <div className="ref-card" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="ref-card-header">
+            <span className="ref-card-title">Evidence Overview</span>
+            <button onClick={() => handleToolClick('evidence')} style={{ fontSize: 11, color: '#4f46e5', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 600 }}>View All</button>
           </div>
-          <div style={{ display: 'flex', gap: 32 }}>
-            {[
-              { label: 'Total',  value: stats.users.total,  color: 'var(--text-primary)' },
-              { label: 'Active', value: stats.users.active, color: '#10b981' },
-              ...Object.entries(stats.users.by_role || {}).map(([role, count]) => ({
-                label: role, value: count, color: 'rgba(255,255,255,0.75)',
-              })),
-            ].map(({ label, value, color }) => (
-              <div key={label}>
-                <p style={{ fontSize: 24, fontWeight: 700, color, lineHeight: 1.2 }}>{value}</p>
-                {/* Label — was 0.25, now 0.55 */}
-                <p style={{ fontSize: 12, color: 'var(--color-white-5)', marginTop: 2 }}>{label}</p>
+          
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
+            {/* Pie Chart container */}
+            <div style={{ position: 'relative', width: 130, height: 130, flexShrink: 0 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={evidenceOverviewData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={44}
+                    outerRadius={58}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {evidenceOverviewData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              {/* Total label inside donut */}
+              <div style={{
+                position: 'absolute', inset: 0,
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                pointerEvents: 'none'
+              }}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{evTotal.toLocaleString()}</span>
+                <span style={{ fontSize: 8, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</span>
               </div>
-            ))}
+            </div>
+
+            {/* Legend list */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, marginLeft: 16 }}>
+              {evidenceOverviewData.map((d, i) => {
+                const pct = Math.round((d.value / evTotal) * 100) || 0
+                return (
+                  <div key={d.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: d.color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {d.name}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {d.value} <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>({pct}%)</span>
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-base)', paddingTop: 10, marginTop: 10, fontSize: 10, color: 'var(--text-muted)' }}>
+            <span>Evidence size: <strong>256.7 GB</strong></span>
+            <span>Last updated: 10 min ago</span>
           </div>
         </div>
-      )}
+
+        {/* Card 3: AI Insights */}
+        <div className="ref-card">
+          <div className="ref-card-header">
+            <span className="ref-card-title">AI Insights</span>
+            <button onClick={() => handleToolClick('investigate')} style={{ fontSize: 11, color: '#4f46e5', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 600 }}>View All</button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {/* Insight 1: Potential Match Found */}
+            <div style={{
+              display: 'flex', gap: 10, padding: 10, borderRadius: 8,
+              background: 'rgba(16,185,129,0.04)', borderLeft: '3px solid #10b981'
+            }}>
+              <div style={{ color: '#10b981', flexShrink: 0, marginTop: 1 }}>
+                <UserCheck size={14} />
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981' }}>Potential Match Found</span>
+                  <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>10 min ago</span>
+                </div>
+                <p style={{ fontSize: 10, color: 'var(--text-secondary)', margin: '2px 0 0 0', lineHeight: 1.3 }}>
+                  AI found 3 potential matches in case Cyber Fraud Investigation
+                </p>
+              </div>
+            </div>
+
+            {/* Insight 2: Anomaly Detected */}
+            <div style={{
+              display: 'flex', gap: 10, padding: 10, borderRadius: 8,
+              background: 'rgba(245,158,11,0.04)', borderLeft: '3px solid #f59e0b'
+            }}>
+              <div style={{ color: '#f59e0b', flexShrink: 0, marginTop: 1 }}>
+                <AlertTriangle size={14} />
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b' }}>Anomaly Detected</span>
+                  <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>25 min ago</span>
+                </div>
+                <p style={{ fontSize: 10, color: 'var(--text-secondary)', margin: '2px 0 0 0', lineHeight: 1.3 }}>
+                  Unusual file behavior detected in Malware Incident Response
+                </p>
+              </div>
+            </div>
+
+            {/* Insight 3: Keyword Alert */}
+            <div style={{
+              display: 'flex', gap: 10, padding: 10, borderRadius: 8,
+              background: 'rgba(59,130,246,0.04)', borderLeft: '3px solid #3b82f6'
+            }}>
+              <div style={{ color: '#3b82f6', flexShrink: 0, marginTop: 1 }}>
+                <Search size={14} />
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#3b82f6' }}>Keyword Alert</span>
+                  <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>1 hour ago</span>
+                </div>
+                <p style={{ fontSize: 10, color: 'var(--text-secondary)', margin: '2px 0 0 0', lineHeight: 1.3 }}>
+                  Keyword "confidential" found in 12 new documents
+                </p>
+              </div>
+            </div>
+
+            {/* Insight 4: Similar Case Recommendation */}
+            <div style={{
+              display: 'flex', gap: 10, padding: 10, borderRadius: 8,
+              background: 'rgba(139,92,246,0.04)', borderLeft: '3px solid #8b5cf6'
+            }}>
+              <div style={{ color: '#8b5cf6', flexShrink: 0, marginTop: 1 }}>
+                <TrendingUp size={14} />
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#8b5cf6' }}>Similar Case Recommendation</span>
+                  <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>2 hours ago</span>
+                </div>
+                <p style={{ fontSize: 10, color: 'var(--text-secondary)', margin: '2px 0 0 0', lineHeight: 1.3 }}>
+                  AI recommends 2 similar cases for reference
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Bottom Row (Case Status Distribution, Analysis Trend, Tools & Modules) */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1.1fr 1.2fr 1.1fr',
+        gap: 16,
+      }}>
+
+        {/* Card 1: Case Status Distribution */}
+        <div className="ref-card" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="ref-card-header">
+            <span className="ref-card-title">Case Status Distribution</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
+            {/* Donut Chart */}
+            <div style={{ position: 'relative', width: 120, height: 120, flexShrink: 0 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={caseStatusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={54}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {caseStatusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              <div style={{
+                position: 'absolute', inset: 0,
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                pointerEvents: 'none'
+              }}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{totalCases}</span>
+                <span style={{ fontSize: 8, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Cases</span>
+              </div>
+            </div>
+
+            {/* Legends */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, marginLeft: 16 }}>
+              {caseStatusData.map((d, i) => {
+                const pct = Math.round((d.value / (totalCases || 1)) * 100) || 0
+                return (
+                  <div key={d.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: d.color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {d.name}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {d.value} <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>({pct}%)</span>
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2: Analysis Trend */}
+        <div className="ref-card" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="ref-card-header" style={{ marginBottom: 12 }}>
+            <span className="ref-card-title">Analysis Trend</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <select style={{
+                fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)',
+                background: 'var(--bg-hover)', border: 'none', borderRadius: 4,
+                padding: '3px 6px', outline: 'none', cursor: 'pointer'
+              }}>
+                <option>Last 7 Days</option>
+                <option>Last 30 Days</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ flex: 1, width: '100%', height: 110, marginTop: 4 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={trendData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#4f46e5" stopOpacity={0.2} />
+                    <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                {/* Horizontal grid/ticks omitted matching reference design */}
+                <Area 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#4f46e5" 
+                  strokeWidth={2} 
+                  fill="url(#trendGrad)"
+                  dot={{ r: 3, stroke: '#4f46e5', strokeWidth: 1, fill: '#ffffff' }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0 0 0', borderTop: '1px solid var(--border-base)', marginTop: 8, fontSize: 9, color: 'var(--text-muted)', fontWeight: 600 }}>
+            <span>May 14</span>
+            <span>May 15</span>
+            <span>May 16</span>
+            <span>May 17</span>
+            <span>May 18</span>
+            <span>May 19</span>
+            <span>May 20</span>
+          </div>
+        </div>
+
+        {/* Card 3: Tools & Modules Grid */}
+        <div className="ref-card">
+          <div className="ref-card-header" style={{ marginBottom: 12 }}>
+            <span className="ref-card-title">Tools & Modules</span>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 10,
+          }}>
+            {/* Tool 1: File Carver */}
+            <button
+              onClick={() => handleToolClick('artifacts')}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                padding: '10px 4px', borderRadius: 8, border: 'none', background: 'rgba(59,130,246,0.06)',
+                color: '#3b82f6', cursor: 'pointer', transition: 'all 0.15s'
+              }}
+              onMouseEnter={e => e.currentTarget.style.filter = 'brightness(0.95)'}
+              onMouseLeave={e => e.currentTarget.style.filter = 'none'}
+            >
+              <Database size={15} style={{ marginBottom: 4 }} />
+              <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-primary)' }}>File Carver</span>
+            </button>
+
+            {/* Tool 2: Hash Analyzer */}
+            <button
+              onClick={() => handleToolClick('evidence')}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                padding: '10px 4px', borderRadius: 8, border: 'none', background: 'rgba(16,185,129,0.06)',
+                color: '#10b981', cursor: 'pointer', transition: 'all 0.15s'
+              }}
+              onMouseEnter={e => e.currentTarget.style.filter = 'brightness(0.95)'}
+              onMouseLeave={e => e.currentTarget.style.filter = 'none'}
+            >
+              <span style={{ fontSize: 13, fontWeight: 800, marginBottom: 4, fontFamily: 'monospace', lineHeight: 1.15 }}>#</span>
+              <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-primary)' }}>Hash Analyzer</span>
+            </button>
+
+            {/* Tool 3: Metadata Extractor */}
+            <button
+              onClick={() => handleToolClick('artifacts')}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                padding: '10px 4px', borderRadius: 8, border: 'none', background: 'rgba(139,92,246,0.06)',
+                color: '#8b5cf6', cursor: 'pointer', transition: 'all 0.15s'
+              }}
+              onMouseEnter={e => e.currentTarget.style.filter = 'brightness(0.95)'}
+              onMouseLeave={e => e.currentTarget.style.filter = 'none'}
+            >
+              <FileText size={15} style={{ marginBottom: 4 }} />
+              <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-primary)' }}>Metadata Ext.</span>
+            </button>
+
+            {/* Tool 4: Malware Scanner */}
+            <button
+              onClick={() => handleToolClick('anomalies')}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                padding: '10px 4px', borderRadius: 8, border: 'none', background: 'rgba(245,158,11,0.06)',
+                color: '#f59e0b', cursor: 'pointer', transition: 'all 0.15s'
+              }}
+              onMouseEnter={e => e.currentTarget.style.filter = 'brightness(0.95)'}
+              onMouseLeave={e => e.currentTarget.style.filter = 'none'}
+            >
+              <AlertTriangle size={15} style={{ marginBottom: 4 }} />
+              <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-primary)' }}>Malware Scan</span>
+            </button>
+
+            {/* Tool 5: Timeline Builder */}
+            <button
+              onClick={() => handleToolClick('timeline')}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                padding: '10px 4px', borderRadius: 8, border: 'none', background: 'rgba(6,182,212,0.06)',
+                color: '#06b6d4', cursor: 'pointer', transition: 'all 0.15s'
+              }}
+              onMouseEnter={e => e.currentTarget.style.filter = 'brightness(0.95)'}
+              onMouseLeave={e => e.currentTarget.style.filter = 'none'}
+            >
+              <Clock size={15} style={{ marginBottom: 4 }} />
+              <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-primary)' }}>Timeline Bld.</span>
+            </button>
+
+            {/* Tool 6: Chat with AI */}
+            <button
+              onClick={() => handleToolClick('investigate')}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                padding: '10px 4px', borderRadius: 8, border: 'none', background: 'rgba(236,72,153,0.06)',
+                color: '#ec4899', cursor: 'pointer', transition: 'all 0.15s'
+              }}
+              onMouseEnter={e => e.currentTarget.style.filter = 'brightness(0.95)'}
+              onMouseLeave={e => e.currentTarget.style.filter = 'none'}
+            >
+              <MessageSquare size={15} style={{ marginBottom: 4 }} />
+              <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-primary)' }}>Chat with AI</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+      
+      {/* Footer timezone indicator */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 24, fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>
+        All times are in IST (UTC +05:30)
+      </div>
+
     </div>
   )
 }

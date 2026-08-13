@@ -128,12 +128,12 @@ export default function GlobalSearch({ caseId = null }) {
   const totalResults = results?.total || 0
 
   return (
-    <div ref={containerRef} className="relative w-72">
+    <div ref={containerRef} className="relative w-96">
       {/* Search input */}
       <div className="relative">
         <Search
-          size={13}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-2 pointer-events-none"
+          size={14}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
         />
         <input
           ref={inputRef}
@@ -141,12 +141,18 @@ export default function GlobalSearch({ caseId = null }) {
           value={query}
           onChange={e => handleSearch(e.target.value)}
           onFocus={() => query.length >= 2 && setOpen(true)}
-          placeholder="Search… ⌘K"
-          className="w-full bg-surface-1 border border-line rounded-xl
-            pl-8 pr-8 py-1.5 text-sm text-ink-0
-            placeholder:text-ink-2 focus:outline-none focus:border-accent/50
-            transition-colors"
+          placeholder="Search cases, evidence, keywords..."
+          className="w-full bg-slate-100 dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-lg
+            pl-9 pr-16 py-1.5 text-xs text-slate-800 dark:text-slate-100
+            placeholder:text-slate-400 focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500/50
+            transition-all"
         />
+        {/* Right shortcut keyboard chip */}
+        {!query && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 px-1.5 py-0.5 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-[10px] text-slate-400 select-none pointer-events-none">
+            Ctrl + K
+          </div>
+        )}
         {query && !loading && (
           <button
             onClick={() => {
@@ -155,7 +161,7 @@ export default function GlobalSearch({ caseId = null }) {
               setOpen(false)
             }}
             className="absolute right-3 top-1/2 -translate-y-1/2
-              text-ink-2 hover:text-ink-0 transition-colors"
+              text-slate-400 hover:text-slate-200 transition-colors"
           >
             <X size={13} />
           </button>
@@ -163,7 +169,7 @@ export default function GlobalSearch({ caseId = null }) {
         {loading && (
           <Loader
             size={13}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-accent animate-spin"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500 animate-spin"
           />
         )}
       </div>

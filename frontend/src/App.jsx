@@ -113,7 +113,7 @@ function AppLayout() {
             <ErrorBoundary>
             <Routes>
               <Route path="/" element={
-                <ProtectedRoute><DashboardPage /></ProtectedRoute>
+                <ProtectedRoute><DashboardPage activeCaseId={activeCaseId} setActiveCaseId={setActiveCaseId} /></ProtectedRoute>
               } />
               <Route path="/admin/users" element={
                 <ProtectedRoute minimumRole="Admin"><AdminUsersPage /></ProtectedRoute>

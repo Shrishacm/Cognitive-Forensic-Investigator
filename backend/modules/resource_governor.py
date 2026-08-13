@@ -29,28 +29,28 @@ def suggest_resource_budget(total_ram_mb: int) -> dict:
     budget based on total RAM.
     """
     if total_ram_mb <= 8192:
-        # 8GB — be conservative
+        # 8GB
         return {
-            "min_free_ram_mb": 2048,
-            "cpu_throttle_percent": 70,
-            "batch_size": 30,
-            "description": "Conservative (8GB RAM) — keeps 2GB free for OS and other apps"
+            "min_free_ram_mb": 512,
+            "cpu_throttle_percent": 90,
+            "batch_size": 50,
+            "description": "Balanced (8GB RAM)"
         }
     elif total_ram_mb <= 16384:
         # 16GB
         return {
-            "min_free_ram_mb": 3072,
-            "cpu_throttle_percent": 80,
-            "batch_size": 50,
-            "description": "Balanced (16GB RAM)"
+            "min_free_ram_mb": 512,
+            "cpu_throttle_percent": 95,
+            "batch_size": 100,
+            "description": "Performance (16GB RAM)"
         }
     else:
         # 32GB+
         return {
-            "min_free_ram_mb": 4096,
-            "cpu_throttle_percent": 90,
-            "batch_size": 100,
-            "description": "Performance (32GB+ RAM)"
+            "min_free_ram_mb": 512,
+            "cpu_throttle_percent": 100,
+            "batch_size": 200,
+            "description": "Maximum Performance (32GB+ RAM)"
         }
 
 class ResourceGovernor:
@@ -62,7 +62,7 @@ class ResourceGovernor:
 
     def __init__(
             self,
-            min_free_ram_mb: int = 2048,
+            min_free_ram_mb: int = 512,
             cpu_throttle_percent: int = 100,
             check_interval: int = 5,
             force_override: bool = False):

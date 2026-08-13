@@ -5,7 +5,7 @@ import re
 import json
 import os
 
-nlp = spacy.load("en_core_web_lg")
+nlp = spacy.load("en_core_web_sm")
 
 
 def _get_graph_path(case_id: str,
@@ -136,16 +136,36 @@ def build_graph(chunks: list[str],
         "organizations": 0, "ips": 0
     }
 
+    # Process all chunks in parallel using spaCy's optimized batching pipeline
+    docs = list(nlp.pipe(chunks, batch_size=256))
     all_extracted = []
 
-    for chunk in chunks:
-        if governor:
+    for i, doc in enumerate(docs):
+        chunk = chunks[i]
+        if governor and i % 50 == 0:
             governor.check_and_throttle()
-        entities = extract_entities(chunk)
-        all_extracted.append(entities)
-        persons = entities["persons"]
 
-        for person in persons:
+        persons, locations, organizations = [], [], []
+        for ent in doc.ents:
+            if ent.label_ == "PERSON":
+                persons.append(ent.text.strip())
+            elif ent.label_ in ("GPE", "LOC", "FAC"):
+                locations.append(ent.text.strip())
+            elif ent.label_ in ("ORG", "NORP"):
+                organizations.append(ent.text.strip())
+
+        ips = re.findall(r'\b(?:\d{1,3}\.){3}\d{1,3}\b', chunk)
+
+        entities = {
+            "persons": _resolve_entities(list(set(persons))),
+            "locations": _resolve_entities(list(set(locations))),
+            "organizations": _resolve_entities(list(set(organizations))),
+            "ips": list(set(ips))
+        }
+        all_extracted.append(entities)
+        persons_resolved = entities["persons"]
+
+        for person in persons_resolved:
             G.add_node(person, type="Person",
                        label=person,
                        case_id=case_id)
@@ -174,10 +194,10 @@ def build_graph(chunks: list[str],
                        relationship="FOUND_IN")
             counts["ips"] += 1
 
-        for j in range(len(persons)):
-            for k in range(j + 1, len(persons)):
+        for j in range(len(persons_resolved)):
+            for k in range(j + 1, len(persons_resolved)):
                 G.add_edge(
-                    persons[j], persons[k],
+                    persons_resolved[j], persons_resolved[k],
                     relationship="CO_MENTIONED_WITH"
                 )
 

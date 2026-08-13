@@ -277,7 +277,8 @@ def _run_document_with_progress(
         chunks = chunk_text(text)
         
         _progress(40, f"Step 3/5: Embedding {len(chunks)} chunks")
-        BATCH = 20
+        # Increase batch size to 100 to reduce Qdrant connection overhead and throttling delay
+        BATCH = 100
         chunk_count = 0
         for i in range(0, len(chunks), BATCH):
             batch = chunks[i:i+BATCH]

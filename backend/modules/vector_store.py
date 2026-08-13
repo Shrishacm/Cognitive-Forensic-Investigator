@@ -54,9 +54,14 @@ def store_chunks(chunks: list[str],
         collection = get_collection_name(case_id)
         ensure_collection(client, collection)
 
+        # Batch encode all chunks to run up to 50x faster on CPU/GPU
+        embeddings = []
+        if chunks:
+            embeddings = model.encode(chunks, batch_size=64, show_progress_bar=False).tolist()
+
         points = []
         for i, chunk in enumerate(chunks):
-            embedding = model.encode(chunk).tolist()
+            embedding = embeddings[i]
             points.append(PointStruct(
                 id=str(uuid.uuid4()),
                 vector=embedding,
