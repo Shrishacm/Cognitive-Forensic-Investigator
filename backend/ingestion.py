@@ -206,10 +206,10 @@ def _run_document_with_progress(
     import tempfile
     import shutil
     db = SessionLocal()
+    evidence_id = evidence.id
+    evidence = db.query(models.Evidence).filter(models.Evidence.id == evidence_id).first()
     qdrant_path = (
         f"{settings.cases_dir}/{case_id}/qdrant")
-
-    evidence_id = evidence.id
 
     def _progress(percent: int, step: str):
         _update_job_progress(job_id, percent, step)

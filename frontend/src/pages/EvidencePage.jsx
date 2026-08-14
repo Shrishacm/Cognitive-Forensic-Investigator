@@ -301,8 +301,8 @@ function InstructionsPanel() {
 
 // ── Queue Settings Modal ────────────────────────────────────
 function QueueModal({ ev, onClose, onQueue }) {
-  const [cpu, setCpu]     = useState(70)
-  const [ram, setRam]     = useState(2)
+  const [cpu, setCpu]     = useState(95)
+  const [ram, setRam]     = useState(0.5)
   const [saving, setSaving] = useState(false)
 
   const handleQueue = async () => {
