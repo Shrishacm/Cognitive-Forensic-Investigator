@@ -86,4 +86,4 @@ echo ======================================================
 echo Setup Complete!
 echo Run 'start_windows.bat' to launch the application.
 echo ======================================================
-pause
+

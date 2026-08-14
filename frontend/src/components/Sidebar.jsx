@@ -4,12 +4,12 @@ import {
   Shield, LayoutDashboard, ListOrdered,
   Users, Plus, Search,
   ChevronRight, Upload, Bot, Network,
-  StickyNote, ShieldCheck, HardDrive,
-  Clock, AlertTriangle, FileText,
+  StickyNote, ShieldCheck,
+  Clock, FileText,
   Crosshair, Globe, UserSearch, LogOut,
   PanelLeftClose, PanelLeftOpen,
   Database, Cpu, Activity, Layers,
-  Settings, Sparkles, Key, GitCompare, Settings2, Zap,
+  Settings, Sparkles, Key, Settings2,
 } from 'lucide-react'
 import { getCases } from '../api/client'
 import { useAuth } from '../context/AuthContext'
@@ -23,16 +23,12 @@ const NAV_TOP = [
 
 const CASE_NAV = [
   { icon: Upload,        label: 'Evidence',       path: 'evidence'       },
-  { icon: HardDrive,     label: 'Artifacts',      path: 'artifacts'      },
   { icon: Clock,         label: 'Timeline',       path: 'timeline'       },
   { icon: Bot,           label: 'Investigate',    path: 'investigate'    },
   { icon: Network,       label: 'Entity Map',     path: 'entities'       },
   { icon: UserSearch,    label: 'Profiles',       path: 'profiles'       },
-  { icon: AlertTriangle, label: 'Anomalies',      path: 'anomalies'      },
   { icon: Crosshair,     label: 'Watchlist',      path: 'watchlist'      },
   { icon: Key,           label: 'Credentials',    path: 'credentials'    },
-  { icon: Zap,           label: 'Contradictions', path: 'contradictions' },
-  { icon: GitCompare,    label: 'Compare',        path: 'compare'        },
   { icon: Globe,         label: 'Geo Map',        path: 'geomap'         },
   { icon: FileText,      label: 'Reports',        path: 'reports'        },
   { icon: StickyNote,    label: 'Notes',          path: 'notes'          },

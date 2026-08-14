@@ -5,6 +5,6 @@ echo Starting Cognitive Forensic Investigator (Windows)...
 start "CFI Frontend" cmd /c "npm run dev --prefix frontend"
 
 :: Start Backend
-call venv\Scripts\activate.bat
+call C:\Users\Yashaswi\cfi_env\Scripts\activate.bat
 set PYTHONPATH=.
 uvicorn backend.main:app --host 0.0.0.0 --port 8000

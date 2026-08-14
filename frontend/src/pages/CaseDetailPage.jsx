@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Upload, Bot, Network, StickyNote,
-  ShieldCheck, HardDrive, Clock,
-  FileText, AlertTriangle, UserSearch,
+  ShieldCheck, Clock,
+  FileText, UserSearch,
   Users, MapPin, Wifi, Crosshair, Globe,
-  Sparkles, Key, GitCompare, Settings2, Download, Zap,
+  Key, Settings2, Download,
 } from 'lucide-react'
 import { getCase, getEvidence, getEntities, exportCase } from '../api/client'
 import Badge from '../components/Badge'
@@ -22,22 +22,18 @@ const STATS_CONFIG = [
 ]
 
 const ACTIONS = [
-  { icon: Upload,        label: 'Evidence',    desc: 'Upload files',          path: 'evidence',    color: '#818cf8' },
-  { icon: HardDrive,     label: 'Artifacts',   desc: 'Browse extracted',      path: 'artifacts',   color: '#60a5fa' },
-  { icon: Clock,         label: 'Timeline',    desc: 'File activity',         path: 'timeline',    color: '#34d399' },
-  { icon: Bot,           label: 'Investigate', desc: 'AI analysis',           path: 'investigate', color: '#a78bfa' },
-  { icon: Network,       label: 'Entity Map',  desc: 'Relationships',         path: 'entities',    color: '#22d3ee' },
-  { icon: AlertTriangle, label: 'Anomalies',   desc: 'Timestamp flags',       path: 'anomalies',   color: '#fbbf24' },
-  { icon: UserSearch,    label: 'Profiles',    desc: 'AI suspect profile',    path: 'profiles',    color: '#f472b6' },
-  { icon: FileText,      label: 'Reports',     desc: 'PDF generation',        path: 'reports',     color: '#fb923c' },
-  { icon: Crosshair,     label: 'Watchlist',   desc: 'Keyword alerts',        path: 'watchlist',   color: '#ef4444' },
-  { icon: Key,           label: 'Credentials', desc: 'Passwords & API keys',  path: 'credentials', color: '#f87171' },
-  { icon: Zap,           label: 'Contradictions', desc: 'AI inconsistency finder', path: 'contradictions', color: '#fbbf24' },
-  { icon: GitCompare,    label: 'Compare',     desc: 'Side-by-side view',    path: 'compare',     color: '#67e8f9' },
-  { icon: Globe,         label: 'Geo Map',     desc: 'GPS & IP locations',    path: 'geomap',      color: '#4ade80' },
-  { icon: StickyNote,    label: 'Notes',       desc: 'Case notes',            path: 'notes',       color: '#fde68a' },
-  { icon: ShieldCheck,   label: 'Audit Log',   desc: 'Chain of custody',      path: 'audit',       color: '#94a3b8' },
-  { icon: Settings2,     label: 'Access',      desc: 'Manage user access',    path: 'settings',    color: '#c084fc' },
+  { icon: Upload,     label: 'Evidence',    desc: 'Upload files',          path: 'evidence',    color: '#818cf8' },
+  { icon: Clock,      label: 'Timeline',    desc: 'File activity',         path: 'timeline',    color: '#34d399' },
+  { icon: Bot,        label: 'Investigate', desc: 'AI analysis',           path: 'investigate', color: '#a78bfa' },
+  { icon: Network,    label: 'Entity Map',  desc: 'Relationships',         path: 'entities',    color: '#22d3ee' },
+  { icon: UserSearch, label: 'Profiles',    desc: 'AI suspect profile',    path: 'profiles',    color: '#f472b6' },
+  { icon: FileText,   label: 'Reports',     desc: 'PDF generation',        path: 'reports',     color: '#fb923c' },
+  { icon: Crosshair,  label: 'Watchlist',   desc: 'Keyword alerts',        path: 'watchlist',   color: '#ef4444' },
+  { icon: Key,        label: 'Credentials', desc: 'Passwords & API keys',  path: 'credentials', color: '#f87171' },
+  { icon: Globe,      label: 'Geo Map',     desc: 'GPS & IP locations',    path: 'geomap',      color: '#4ade80' },
+  { icon: StickyNote, label: 'Notes',       desc: 'Case notes',            path: 'notes',       color: '#fde68a' },
+  { icon: ShieldCheck,label: 'Audit Log',   desc: 'Chain of custody',      path: 'audit',       color: '#94a3b8' },
+  { icon: Settings2,  label: 'Access',      desc: 'Manage user access',    path: 'settings',    color: '#c084fc' },
 ]
 
 export default function CaseDetailPage() {
