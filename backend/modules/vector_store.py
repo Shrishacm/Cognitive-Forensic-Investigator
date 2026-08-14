@@ -1,15 +1,34 @@
 from qdrant_client import QdrantClient
 from qdrant_client.models import (Distance,
     VectorParams, PointStruct)
-from sentence_transformers import SentenceTransformer
 import uuid
 import os
 
 VECTOR_SIZE = 768
-model = SentenceTransformer(
-    "nomic-ai/nomic-embed-text-v1",
-    trust_remote_code=True
-)
+import requests
+from backend.dependencies import get_settings
+
+def get_ollama_embeddings(texts: list[str]) -> list[list[float]]:
+    """
+    Calls local Ollama server to generate batch embeddings.
+    """
+    settings = get_settings()
+    url = f"{settings.ollama_base_url}/api/embed"
+    data = {
+        "model": "nomic-embed-text",
+        "input": texts
+    }
+    try:
+        res = requests.post(url, json=data, timeout=60)
+        res.raise_for_status()
+        res_json = res.json()
+        if "embeddings" in res_json:
+            return res_json["embeddings"]
+        else:
+            raise ValueError(f"Ollama response missing 'embeddings' key: {res_json}")
+    except Exception as e:
+        print(f"OLLAMA EMBEDDING ERROR: {e}")
+        raise
 
 
 def get_collection_name(case_id: str) -> str:
@@ -54,10 +73,10 @@ def store_chunks(chunks: list[str],
         collection = get_collection_name(case_id)
         ensure_collection(client, collection)
 
-        # Batch encode all chunks to run up to 50x faster on CPU/GPU
+        # Batch encode all chunks via local Ollama API
         embeddings = []
         if chunks:
-            embeddings = model.encode(chunks, batch_size=64, show_progress_bar=False).tolist()
+            embeddings = get_ollama_embeddings(chunks)
 
         points = []
         for i, chunk in enumerate(chunks):
@@ -98,7 +117,7 @@ def search_chunks(query: str,
     try:
         client = get_client(qdrant_path)
         collection = get_collection_name(case_id)
-        query_vector = model.encode(query).tolist()
+        query_vector = get_ollama_embeddings([query])[0]
 
         query_filter = None
         if evidence_id:
