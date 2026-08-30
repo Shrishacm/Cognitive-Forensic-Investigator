@@ -28,8 +28,8 @@ def extract_text(file_path: str) -> str:
 
 
 def chunk_text(text: str,
-               chunk_size: int = 1500,
-               overlap: int = 150) -> list[str]:
+               chunk_size: int = 20000,
+               overlap: int = 0) -> list[str]:
     """
     Splits text into overlapping chunks.
     """

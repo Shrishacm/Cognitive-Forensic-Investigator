@@ -277,8 +277,8 @@ def _run_document_with_progress(
         chunks = chunk_text(text)
         
         _progress(40, f"Step 3/5: Embedding {len(chunks)} chunks")
-        # Increase batch size to 100 to reduce Qdrant connection overhead and throttling delay
-        BATCH = 100
+        # Use a larger batch size for faster PyTorch throughput on CPU
+        BATCH = 250
         chunk_count = 0
         for i in range(0, len(chunks), BATCH):
             batch = chunks[i:i+BATCH]
@@ -431,7 +431,7 @@ def _run_document_with_progress(
 
 def _run_forensic_with_progress(evidence, case_id, file_path,
                            filename, job_id, governor,
-                           include_deleted, qdrant_path, db):
+                           include_deleted, qdrant_path, db, progress_callback=None):
 
     """
     Full forensic pipeline for disk images.
@@ -764,6 +764,7 @@ def _run_forensic_with_progress(evidence, case_id, file_path,
             evidence.error_message = (
                 f"Mount failed: {mount_error}")
             db.commit()
+            raise RuntimeError(f"Mount failed: {mount_error}")
 
     except Exception as e:
         print(f"[FORENSIC] PIPELINE FAILED: {e}")

@@ -100,6 +100,15 @@ def add_to_queue(
             status_code=400,
             detail="Already in queue")
 
+    # Delete any existing Failed/Completed job to avoid UNIQUE constraint violation
+    old_job = db.query(models.IngestionJob).filter(
+        models.IngestionJob.evidence_id == body.evidence_id
+    ).first()
+    if old_job:
+        db.delete(old_job)
+        db.commit()
+
+
     # Get queue position
     max_pos = db.query(
         models.IngestionJob

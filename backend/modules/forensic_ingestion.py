@@ -525,6 +525,8 @@ def ingest_e01(image_path: str,
             "pytsk3 not installed. "
             "Run: pip install pytsk3")
 
+    # Normalize path to prevent pyewf \./ unnormalized path crashes on Windows
+    image_path = os.path.abspath(image_path).replace("\\./", "\\").replace("/./", "/").replace("\\.\\", "\\")
     filenames = pyewf.glob(image_path)
     ewf_handle = pyewf.handle()
     ewf_handle.open(filenames)

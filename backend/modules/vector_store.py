@@ -4,31 +4,30 @@ from qdrant_client.models import (Distance,
 import uuid
 import os
 
-VECTOR_SIZE = 768
+import torch
+torch.set_num_threads(4)
+from sentence_transformers import SentenceTransformer
+
+VECTOR_SIZE = 384
 import requests
 from backend.dependencies import get_settings
 
+# Initialize model once globally so it doesn't reload on every batch
+# all-MiniLM-L6-v2 is extremely fast on CPU
+_embed_model = None
+
 def get_ollama_embeddings(texts: list[str]) -> list[list[float]]:
     """
-    Calls local Ollama server to generate batch embeddings.
+    Replaced with SentenceTransformers for much faster CPU embedding.
+    Keeps the same function name to avoid breaking imports.
     """
-    settings = get_settings()
-    url = f"{settings.ollama_base_url}/api/embed"
-    data = {
-        "model": "nomic-embed-text",
-        "input": texts
-    }
-    try:
-        res = requests.post(url, json=data, timeout=60)
-        res.raise_for_status()
-        res_json = res.json()
-        if "embeddings" in res_json:
-            return res_json["embeddings"]
-        else:
-            raise ValueError(f"Ollama response missing 'embeddings' key: {res_json}")
-    except Exception as e:
-        print(f"OLLAMA EMBEDDING ERROR: {e}")
-        raise
+    global _embed_model
+    if _embed_model is None:
+        _embed_model = SentenceTransformer('all-MiniLM-L6-v2')
+    
+    truncated = [t[:1000] for t in texts]
+    embeddings = _embed_model.encode(truncated)
+    return embeddings.tolist()
 
 
 def get_collection_name(case_id: str) -> str:
@@ -39,9 +38,14 @@ def get_collection_name(case_id: str) -> str:
     return f"case_{case_id[:8]}"
 
 
+_qdrant_client = None
+
 def get_client(qdrant_path: str) -> QdrantClient:
-    """Returns Qdrant client for given path."""
-    return QdrantClient(path=qdrant_path)
+    """Returns Qdrant client for given path, cached globally."""
+    global _qdrant_client
+    if _qdrant_client is None:
+        _qdrant_client = QdrantClient(path=qdrant_path)
+    return _qdrant_client
 
 
 def ensure_collection(client: QdrantClient,

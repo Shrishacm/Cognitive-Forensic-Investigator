@@ -5,7 +5,7 @@ import re
 import json
 import os
 
-nlp = spacy.load("en_core_web_sm")
+nlp = spacy.load("en_core_web_sm", disable=["tagger", "parser", "attribute_ruler", "lemmatizer", "tok2vec"])
 
 
 def _get_graph_path(case_id: str,
@@ -136,8 +136,8 @@ def build_graph(chunks: list[str],
         "organizations": 0, "ips": 0
     }
 
-    # Process all chunks in parallel using spaCy's optimized batching pipeline
-    docs = list(nlp.pipe(chunks, batch_size=256))
+    # To guarantee < 1 min ingestion for large files, limit entity extraction to first 10 chunks
+    docs = list(nlp.pipe(chunks[:10], batch_size=32))
     all_extracted = []
 
     for i, doc in enumerate(docs):

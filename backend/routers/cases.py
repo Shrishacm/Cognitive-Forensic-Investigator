@@ -144,10 +144,12 @@ def create_case(
         settings = get_settings()
         case_id = str(uuid.uuid4())
 
+        case_number = body.case_number if body.case_number else None
+
         db_case = models.Case(
             id=case_id,
             case_name=body.case_name,
-            case_number=body.case_number,
+            case_number=case_number,
             status="Open",
             priority=body.priority,
             description=body.description,
@@ -190,6 +192,7 @@ def create_case(
         raise
     except Exception as exc:
         db.rollback()
+        import traceback; traceback.print_exc()
         raise HTTPException(
             status_code=500,
             detail=schemas.ErrorResponse(
