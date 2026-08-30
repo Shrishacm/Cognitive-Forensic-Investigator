@@ -32,7 +32,7 @@ export default function PageLayout({
                 fontWeight: 700,
                 letterSpacing: '-0.025em',
                 lineHeight: 1.25,
-                background: 'linear-gradient(135deg, #ffffff 0%, #c4b5fd 100%)',
+                background: 'linear-gradient(135deg, var(--ink-0) 0%, var(--brand-primary) 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
@@ -43,7 +43,7 @@ export default function PageLayout({
             {subtitle && (
               <p style={{
                 fontSize: 14,
-                color: 'var(--color-white-6)',
+                color: 'var(--ink-1)',
                 marginTop: 3,
                 lineHeight: 1.5,
               }}>
@@ -68,3 +68,4 @@ export default function PageLayout({
     </div>
   )
 }
+
