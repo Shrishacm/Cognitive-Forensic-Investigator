@@ -119,6 +119,56 @@ export default function StatusBar() {
           }}>
             3
           </span>
+          {showNotifs && (
+            <div className="animate-fade-up" style={{
+              position: 'absolute',
+              top: 'calc(100% + 12px)',
+              right: -10,
+              width: 320,
+              background: 'var(--bg-panel)',
+              border: '1px solid var(--border-base)',
+              borderRadius: 12,
+              boxShadow: '0 10px 40px -10px rgba(0,0,0,0.3)',
+              zIndex: 100,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Notifications</span>
+                <span style={{ fontSize: 11, color: 'var(--brand-primary)', cursor: 'pointer' }}>Mark all as read</span>
+              </div>
+              <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', gap: 12, cursor: 'pointer', background: 'var(--bg-hover)' }}>
+                  <div style={{ color: '#10b981', marginTop: 2 }}><CheckCircle size={16} /></div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>Potential Match Found</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>AI found 3 potential matches in Cyber Fraud Investigation.</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>10 min ago</div>
+                  </div>
+                </div>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', gap: 12, cursor: 'pointer' }}>
+                  <div style={{ color: '#f59e0b', marginTop: 2 }}><AlertTriangle size={16} /></div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>Anomaly Detected</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Unusual file behavior detected in Malware Incident Response.</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>25 min ago</div>
+                  </div>
+                </div>
+                <div style={{ padding: '12px 16px', display: 'flex', gap: 12, cursor: 'pointer' }}>
+                  <div style={{ color: '#3b82f6', marginTop: 2 }}><Zap size={16} /></div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>Keyword Alert</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Keyword "confidential" found in 12 new documents.</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>1 hour ago</div>
+                  </div>
+                </div>
+              </div>
+              <div style={{ padding: '10px', borderTop: '1px solid var(--border-subtle)', textAlign: 'center', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                View all notifications
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Help Circle Icon */}
@@ -198,5 +248,6 @@ export default function StatusBar() {
     </div>
   )
 }
+
 
 
