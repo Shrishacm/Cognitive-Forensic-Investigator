@@ -134,7 +134,7 @@ export default function Sidebar({ activeCaseId, status, collapsed, onToggle }) {
               borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent',
               color: 'var(--ink-2)', cursor: 'pointer', transition: 'all 0.15s',
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = 'var(--ink-0)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--ink-0)'; e.currentTarget.style.borderColor = 'var(--line-bright)' }}
             onMouseLeave={e => { e.currentTarget.style.color = 'var(--ink-2)'; e.currentTarget.style.borderColor = 'var(--line-DEFAULT)' }}
           >
             <PanelLeftClose size={13} />
@@ -219,7 +219,7 @@ export default function Sidebar({ activeCaseId, status, collapsed, onToggle }) {
                 padding: '1px 4px', borderRadius: 4, letterSpacing: '0.05em'
               }}>BETA</span>
             </div>
-            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', lineHeight: 1.4, margin: '0 0 10px 0' }}>
+            <p style={{ fontSize: 10, color: 'var(--ink-2)', lineHeight: 1.4, margin: '0 0 10px 0' }}>
               Ask AI about evidence, cases, or forensic queries...
             </p>
             <button
@@ -270,7 +270,7 @@ export default function Sidebar({ activeCaseId, status, collapsed, onToggle }) {
               <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--ink-0)', margin: 0 }}>System Status</p>
               <p style={{ fontSize: 9, color: '#10b981', margin: 0 }}>All Systems Operational</p>
             </div>
-            <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)', whiteSpace: 'nowrap' }}>2 min ago</span>
+            <span style={{ fontSize: 8, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>2 min ago</span>
           </div>
         </div>
       )}
@@ -322,6 +322,7 @@ export default function Sidebar({ activeCaseId, status, collapsed, onToggle }) {
     </aside>
   )
 }
+
 
 
 
