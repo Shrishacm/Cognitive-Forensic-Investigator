@@ -8,15 +8,15 @@ export default {
     extend: {
       colors: {
         bg: {
-          app:            '#08090e',
-          sidebar:        '#0c0d14',
+          app:            'var(--surface-0)',
+          sidebar:        'var(--surface-1)',
           base:           '#101219',
-          raised:         '#14161f',
-          overlay:        '#191c28',
-          hover:          '#1e2130',
-          active:         '#232638',
-          border:         '#1f2235',
-          'border-bright':'#2a2f48',
+          raised:         'var(--surface-2)',
+          overlay:        'var(--surface-3)',
+          hover:          'var(--surface-4)',
+          active:         'var(--surface-5)',
+          border:         'var(--line-DEFAULT)',
+          'border-bright':'var(--line-bright)',
         },
         brand: {
           dim:     '#1e1b4b',
@@ -33,19 +33,19 @@ export default {
         blue:   '#3b82f6',
         purple: '#8b5cf6',
         text: {
-          0: '#e8eaf2',
-          1: '#9399b2',
-          2: '#5c6280',
-          3: '#363a52',
+          0: 'var(--ink-0)',
+          1: 'var(--ink-1)',
+          2: 'var(--ink-2)',
+          3: 'var(--ink-3)',
         },
         // ── Legacy aliases so old pages still compile ──
         surface: {
-          0: '#08090e',
-          1: '#0c0d14',
-          2: '#14161f',
-          3: '#191c28',
-          4: '#1e2130',
-          5: '#232638',
+          0: 'var(--surface-0)',
+          1: 'var(--surface-1)',
+          2: 'var(--surface-2)',
+          3: 'var(--surface-3)',
+          4: 'var(--surface-4)',
+          5: 'var(--surface-5)',
         },
         accent: {
           dim:     '#1e1b4b',
@@ -60,19 +60,19 @@ export default {
         risk:    '#ef4444',
         info:    '#3b82f6',
         ink: {
-          0: '#e8eaf2',
-          1: '#9399b2',
-          2: '#5c6280',
-          3: '#363a52',
+          0: 'var(--ink-0)',
+          1: 'var(--ink-1)',
+          2: 'var(--ink-2)',
+          3: 'var(--ink-3)',
         },
         line: {
-          DEFAULT: '#1f2235',
-          bright:  '#2a2f48',
+          DEFAULT: 'var(--line-DEFAULT)',
+          bright:  'var(--line-bright)',
         },
         success: '#10b981',
         warning: '#f59e0b',
         danger:  '#ef4444',
-        border:  '#1f2235',
+        border:  'var(--line-DEFAULT)',
       },
       fontFamily: {
         sans: ['"Inter"', 'system-ui', 'sans-serif'],
@@ -155,3 +155,4 @@ export default {
   },
   plugins: []
 }
+

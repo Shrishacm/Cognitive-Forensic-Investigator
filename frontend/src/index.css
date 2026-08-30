@@ -86,6 +86,18 @@
 }
 
 :root {
+  --surface-0: #f8fafc;
+  --surface-1: #ffffff;
+  --surface-2: #f1f5f9;
+  --surface-3: #e2e8f0;
+  --surface-4: #cbd5e1;
+  --surface-5: #94a3b8;
+  --ink-0: #0f172a;
+  --ink-1: #334155;
+  --ink-2: #64748b;
+  --ink-3: #94a3b8;
+  --line-DEFAULT: #e2e8f0;
+  --line-bright: #cbd5e1;
   --bg-app: #f8fafc;
   --bg-panel: #ffffff;
   --bg-hover: rgba(0, 0, 0, 0.03);
@@ -123,6 +135,18 @@
 }
 
 .dark {
+  --surface-0: #08090e;
+  --surface-1: #0c0d14;
+  --surface-2: #14161f;
+  --surface-3: #191c28;
+  --surface-4: #1e2130;
+  --surface-5: #232638;
+  --ink-0: #e8eaf2;
+  --ink-1: #9399b2;
+  --ink-2: #5c6280;
+  --ink-3: #363a52;
+  --line-DEFAULT: #1f2235;
+  --line-bright: #2a2f48;
   --bg-app: #04050b;
   --bg-panel: rgba(255, 255, 255, 0.03);
   --bg-hover: rgba(255, 255, 255, 0.05);
@@ -483,3 +507,4 @@ button, a {
   color: var(--text-secondary);
   margin-top: 2px;
 }
+

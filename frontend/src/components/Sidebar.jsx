@@ -72,8 +72,8 @@ export default function Sidebar({ activeCaseId, status, collapsed, onToggle }) {
   return (
     <aside style={{
       width: '100%',
-      background: '#0a0e1a', // Dark navy sidebar background matching the reference
-      borderRight: '1px solid rgba(255,255,255,0.06)',
+      background: 'var(--surface-1)', // Adapt to light/dark
+      borderRight: '1px solid var(--line-DEFAULT)',
       display: 'flex',
       flexDirection: 'column',
       height: '100vh',
@@ -83,7 +83,7 @@ export default function Sidebar({ activeCaseId, status, collapsed, onToggle }) {
       {/* Brand Header */}
       <div style={{
         padding: '20px 16px',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        borderBottom: '1px solid var(--line-DEFAULT)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -101,10 +101,10 @@ export default function Sidebar({ activeCaseId, status, collapsed, onToggle }) {
               <Fingerprint size={18} color="white" />
             </div>
             <div style={{ minWidth: 0 }}>
-              <h1 style={{ fontSize: 13, fontWeight: 700, color: '#ffffff', letterSpacing: '-0.01em', lineHeight: 1.2, margin: 0 }}>
+              <h1 style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink-0)', letterSpacing: '-0.01em', lineHeight: 1.2, margin: 0 }}>
                 IDF AI Assistant
               </h1>
-              <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', margin: '1px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <p style={{ fontSize: 9, color: 'var(--ink-2)', margin: '1px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 Intelligent Digital Forensic AI
               </p>
             </div>
@@ -132,10 +132,10 @@ export default function Sidebar({ activeCaseId, status, collapsed, onToggle }) {
             style={{
               width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
               borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent',
-              color: 'rgba(255,255,255,0.4)', cursor: 'pointer', transition: 'all 0.15s',
+              color: 'var(--ink-2)', cursor: 'pointer', transition: 'all 0.15s',
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--ink-0)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--ink-2)'; e.currentTarget.style.borderColor = 'var(--line-DEFAULT)' }}
           >
             <PanelLeftClose size={13} />
           </button>
@@ -173,10 +173,10 @@ export default function Sidebar({ activeCaseId, status, collapsed, onToggle }) {
                 borderRadius: 8,
                 background: active
                   ? 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)' // Premium blue/purple gradient pill
-                  : isHovered ? 'rgba(255,255,255,0.06)' : 'transparent',
+                  : isHovered ? 'var(--bg-hover)' : 'transparent',
                 border: 'none',
                 cursor: 'pointer',
-                color: active ? '#ffffff' : isHovered ? '#ffffff' : 'rgba(255,255,255,0.65)',
+                color: active ? '#ffffff' : isHovered ? 'var(--ink-0)' : 'var(--ink-1)',
                 fontSize: 13,
                 fontWeight: active ? 600 : 500,
                 textAlign: 'left',
@@ -201,7 +201,7 @@ export default function Sidebar({ activeCaseId, status, collapsed, onToggle }) {
           display: 'flex',
           flexDirection: 'column',
           gap: 12,
-          borderTop: '1px solid rgba(255,255,255,0.06)',
+          borderTop: '1px solid var(--line-DEFAULT)',
           flexShrink: 0,
         }}>
           {/* AI Assistant card */}
@@ -213,7 +213,7 @@ export default function Sidebar({ activeCaseId, status, collapsed, onToggle }) {
             position: 'relative',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: '#ffffff' }}>AI Assistant</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-0)' }}>AI Assistant</span>
               <span style={{
                 background: '#4f46e5', color: '#ffffff', fontSize: 8, fontWeight: 700,
                 padding: '1px 4px', borderRadius: 4, letterSpacing: '0.05em'
@@ -250,7 +250,7 @@ export default function Sidebar({ activeCaseId, status, collapsed, onToggle }) {
 
           {/* System Status */}
           <div style={{
-            background: 'rgba(255,255,255,0.02)',
+            background: 'var(--surface-2)',
             border: '1px solid rgba(255,255,255,0.05)',
             borderRadius: 8,
             padding: '8px 10px',
@@ -267,7 +267,7 @@ export default function Sidebar({ activeCaseId, status, collapsed, onToggle }) {
               <Shield size={11} />
             </div>
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 10, fontWeight: 600, color: '#ffffff', margin: 0 }}>System Status</p>
+              <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--ink-0)', margin: 0 }}>System Status</p>
               <p style={{ fontSize: 9, color: '#10b981', margin: 0 }}>All Systems Operational</p>
             </div>
             <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)', whiteSpace: 'nowrap' }}>2 min ago</span>
@@ -278,8 +278,8 @@ export default function Sidebar({ activeCaseId, status, collapsed, onToggle }) {
       {/* User Footer */}
       <div style={{
         padding: collapsed ? '14px 6px' : '12px 16px',
-        borderTop: '1px solid rgba(255,255,255,0.06)',
-        background: 'rgba(0,0,0,0.15)',
+        borderTop: '1px solid var(--line-DEFAULT)',
+        background: 'var(--surface-2)',
         flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: collapsed ? 0 : 10, justifyContent: collapsed ? 'center' : 'flex-start' }}>
@@ -296,10 +296,10 @@ export default function Sidebar({ activeCaseId, status, collapsed, onToggle }) {
           {!collapsed && (
             <>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 12, fontWeight: 600, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0, lineHeight: 1.3 }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-0)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0, lineHeight: 1.3 }}>
                   {user?.full_name || user?.username || 'Analyst'}
                 </p>
-                <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', margin: 0 }}>
+                <p style={{ fontSize: 9, color: 'var(--ink-2)', margin: 0 }}>
                   {user?.role || 'Digital Forensic Expert'}
                 </p>
               </div>
@@ -308,10 +308,10 @@ export default function Sidebar({ activeCaseId, status, collapsed, onToggle }) {
                 title="Sign out"
                 style={{
                   padding: 5, borderRadius: 5, background: 'transparent', border: 'none',
-                  color: 'rgba(255,255,255,0.45)', cursor: 'pointer', display: 'flex', transition: 'all 0.15s',
+                  color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', transition: 'all 0.15s',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.12)' }}
-                onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; e.currentTarget.style.background = 'transparent' }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--ink-2)'; e.currentTarget.style.background = 'transparent' }}
               >
                 <LogOut size={13} />
               </button>
@@ -322,3 +322,9 @@ export default function Sidebar({ activeCaseId, status, collapsed, onToggle }) {
     </aside>
   )
 }
+
+
+
+
+
+

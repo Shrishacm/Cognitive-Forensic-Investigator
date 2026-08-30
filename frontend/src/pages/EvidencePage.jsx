@@ -747,7 +747,7 @@ export default function EvidencePage() {
           
           {/* 1. System Resources (Top) */}
           {sysInfo && (
-            <div className="bg-surface-2/40 border border-line rounded-xl p-5 shadow-sm flex flex-col justify-center">
+            <div className="bg-surface-1 border border-line rounded-xl p-5 shadow-sm flex flex-col justify-center">
               <div className="flex items-center justify-between mb-4">
                  <h2 className="text-sm font-bold text-ink-0 flex items-center gap-2"><Cpu size={16} className="text-accent" /> System Resources</h2>
                  <div className="flex items-center gap-2">
@@ -826,7 +826,7 @@ export default function EvidencePage() {
               }}
               onClick={() => fileRef.current?.click()}
               className={`w-full border-2 border-dashed rounded-2xl py-16 px-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all
-                ${dragOver ? 'border-accent bg-accent/10 scale-[1.01]' : 'border-line bg-surface-1 hover:border-accent/50 hover:bg-surface-2/20'}`}
+                ${dragOver ? 'border-accent bg-accent/10 scale-[1.01]' : 'border-line bg-surface-1 hover:border-accent/50 hover:bg-surface-2'}`}
             >
               <Upload size={40} className="mb-4 text-ink-2" />
               <p className="text-ink-0 font-bold text-lg mb-1">Upload Evidence</p>
@@ -911,8 +911,8 @@ export default function EvidencePage() {
           </div>
         </div>
         {/* RIGHT SIDEBAR: INGESTION QUEUE */}
-        <div className="xl:col-span-4 bg-surface-2/40 rounded-2xl p-6 border border-line shadow-sm flex flex-col h-max">
-          <div className="flex items-center justify-between mb-6 sticky top-0 bg-surface-2/40 pt-2 pb-4 z-10 backdrop-blur-sm">
+        <div className="xl:col-span-4 bg-surface-1 rounded-2xl p-6 border border-line shadow-sm flex flex-col h-max">
+          <div className="flex items-center justify-between mb-6 sticky top-0 bg-surface-1 pt-2 pb-4 z-10 backdrop-blur-sm">
             <div className="flex items-center gap-2">
               <Zap size={22} className="text-accent" />
               <h2 className="text-lg font-bold text-ink-0">Ingestion Queue</h2>
@@ -1068,3 +1068,4 @@ export default function EvidencePage() {
 
   )
 }
+
