@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import GlobalSearch from './GlobalSearch'
-import { Moon, Sun, Bell, HelpCircle } from 'lucide-react'
+import { Moon, Sun, Bell, HelpCircle, AlertTriangle, CheckCircle, Zap } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 
@@ -9,6 +9,19 @@ export default function StatusBar() {
   const { user } = useAuth()
 
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia?.('(prefers-color-scheme: dark)').matches)
+
+  const [showNotifs, setShowNotifs] = useState(false);
+  const notifRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setShowNotifs(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const toggleTheme = () => {
     setTheme(isDark ? 'light' : 'dark')
@@ -66,9 +79,10 @@ export default function StatusBar() {
         </button>
 
         {/* Notifications Icon with Badge */}
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+        <div ref={notifRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
           <button
             title="Notifications"
+            onClick={() => setShowNotifs(!showNotifs)}
             style={{
               background: 'transparent',
               border: 'none',
@@ -184,3 +198,5 @@ export default function StatusBar() {
     </div>
   )
 }
+
+
