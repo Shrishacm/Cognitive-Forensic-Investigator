@@ -11,6 +11,7 @@ export default function StatusBar() {
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia?.('(prefers-color-scheme: dark)').matches)
 
   const [showNotifs, setShowNotifs] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(3);
   const notifRef = useRef(null);
 
   useEffect(() => {
@@ -99,7 +100,7 @@ export default function StatusBar() {
           >
             <Bell size={17} />
           </button>
-          {/* Notification Badge matching reference image */}
+          {/* Notification Badge matching reference image */} {unreadCount > 0 && (
           <span style={{
             position: 'absolute',
             top: -1,
@@ -117,8 +118,9 @@ export default function StatusBar() {
             border: '1.5px solid var(--bg-panel)',
             pointerEvents: 'none',
           }}>
-            3
+            {unreadCount}
           </span>
+          )}
           {showNotifs && (
             <div className="animate-fade-up" style={{
               position: 'absolute',
@@ -136,10 +138,10 @@ export default function StatusBar() {
             }}>
               <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Notifications</span>
-                <span style={{ fontSize: 11, color: 'var(--brand-primary)', cursor: 'pointer' }}>Mark all as read</span>
+                <span onClick={() => setUnreadCount(0)} style={{ fontSize: 11, color: 'var(--brand-primary)', cursor: 'pointer' }}>Mark all as read</span>
               </div>
               <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', gap: 12, cursor: 'pointer', background: 'var(--bg-hover)' }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', gap: 12, cursor: 'pointer', background: unreadCount > 0 ? 'var(--bg-hover)' : 'transparent' }}>
                   <div style={{ color: '#10b981', marginTop: 2 }}><CheckCircle size={16} /></div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>Potential Match Found</div>
@@ -147,7 +149,7 @@ export default function StatusBar() {
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>10 min ago</div>
                   </div>
                 </div>
-                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', gap: 12, cursor: 'pointer' }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', gap: 12, cursor: 'pointer', background: unreadCount > 0 ? 'var(--bg-hover)' : 'transparent' }}>
                   <div style={{ color: '#f59e0b', marginTop: 2 }}><AlertTriangle size={16} /></div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>Anomaly Detected</div>
@@ -155,7 +157,7 @@ export default function StatusBar() {
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>25 min ago</div>
                   </div>
                 </div>
-                <div style={{ padding: '12px 16px', display: 'flex', gap: 12, cursor: 'pointer' }}>
+                <div style={{ padding: '12px 16px', display: 'flex', gap: 12, cursor: 'pointer', background: unreadCount > 0 ? 'var(--bg-hover)' : 'transparent' }}>
                   <div style={{ color: '#3b82f6', marginTop: 2 }}><Zap size={16} /></div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>Keyword Alert</div>
@@ -248,6 +250,10 @@ export default function StatusBar() {
     </div>
   )
 }
+
+
+
+
 
 
 
